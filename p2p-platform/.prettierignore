@@ -1,0 +1,25 @@
+# Dependencies
+node_modules/
+vendor/
+
+# Build output
+public/build/
+bootstrap/ssr/
+storage/
+node_modules/.vite/
+
+# Laravel generated code (kept in sync with vite.config.ts lint.ignorePatterns)
+resources/js/actions/
+resources/js/components/ui/
+resources/js/routes/
+resources/js/wayfinder/
+
+# Config files intentionally unformatted (mirrors fmt.ignorePatterns)
+.github/
+composer.json
+resources/views/mail/
+.puku-cli/
+
+# Documentation assets not part of the app build
+*.pdf
+*.md

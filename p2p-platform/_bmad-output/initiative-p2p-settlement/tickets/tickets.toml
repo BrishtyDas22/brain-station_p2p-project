@@ -1,0 +1,56 @@
+# Initiative breakdown — P2P Settlement
+#
+# The epics in build order. Each is written thin (`refined: false`); Sofia cuts the
+# initiative's R1-R30 into per-epic Requirements and then plans the epic's stories.
+#
+# `covers` cites the initiative's requirement ids. `prerequisites` lists the epics that
+# must exist first, because each depends on a contract its predecessor fixes.
+
+[[epic]]
+id = "1"
+slug = "ledger-core"
+title = "Ledger core: accounts, wallets, entries, and the hash chain"
+covers = ["R3", "R4", "R5", "R6", "R7", "R8", "R9", "R10", "R23"]
+prerequisites = []
+refined = true
+folder = "epic-ledger-core"
+
+[[epic]]
+id = "2"
+slug = "identity-kyc-authorization"
+title = "Identity, KYC, and the authorization boundary"
+covers = ["R1", "R2", "R12", "R25", "R28"]
+prerequisites = ["1"]
+refined = false
+
+[[epic]]
+id = "3"
+slug = "transfer-execution"
+title = "Transfer execution: idempotency, reservation, atomic post, and recovery"
+covers = ["R11", "R13", "R14", "R15", "R16", "R26", "R27"]
+prerequisites = ["1", "2"]
+refined = false
+
+[[epic]]
+id = "4"
+slug = "reversal"
+title = "Reversal: one-shot terminal reversal under dedicated authority"
+covers = ["R17", "R18", "R19", "R20", "R21", "R22"]
+prerequisites = ["1", "3"]
+refined = false
+
+[[epic]]
+id = "5"
+slug = "reconciliation-audit-operations"
+title = "Reconciliation, the independent audit chain, and operational signals"
+covers = ["R23", "R24", "R25", "R26"]
+prerequisites = ["1", "3", "4"]
+refined = false
+
+[[epic]]
+id = "6"
+slug = "production-enablement-gates"
+title = "Production enablement gates and capacity validation"
+covers = ["R22", "R26", "R27", "R29"]
+prerequisites = ["1", "2", "3", "4", "5"]
+refined = false

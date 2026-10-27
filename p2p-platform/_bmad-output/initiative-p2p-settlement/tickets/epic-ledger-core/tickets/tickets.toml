@@ -1,0 +1,149 @@
+# Epic breakdown — Ledger core
+#
+# The stories of `ledger-core`, in build order. Each is small, ordered, and independently
+# testable. `covers` cites the epic's own `R<n>` ids (epic-ledger-core.md §4).
+#
+# `prerequisites` lists the stories that must exist first, because each depends on a contract
+# its predecessor fixes.
+#
+# M-2 (canonicalization, ⚪ BLOCKED) blocks exactly one thing: the hash implementation. Story 8
+# builds the hashing module's interface and injection point; its implementation waits for M-2.
+# Everything else here is buildable now.
+
+[[story]]
+id = "1"
+slug = "ledger-schema-foundation"
+title = "Ledger and wallet tables: accounts, wallets, and the ownership constraints"
+covers = ["R1", "R2", "R3", "R4"]
+prerequisites = []
+# Built and fully verified. The wallet-account immutability invariant is
+# enforced by the database itself (`trg_wallets_account_id_immutable`), proven
+# against the isolated, trigger-capable MySQL instance this project owns on
+# port 3307. The trigger ships fail-closed and the trigger-bypass escape hatch
+# is switched off in the test configuration, so the suite runs against a schema
+# whose invariant is genuinely enforced. The shared workstation MySQL80 service
+# on port 3306 was not modified, restarted or reconfigured.
+status = "built"
+
+[[story]]
+id = "2"
+slug = "ledger-entry-table"
+title = "The ledger_entries table: append-only shape, hashed fields, and the no-status decision"
+covers = ["R5", "R6", "R7", "R10"]
+prerequisites = ["1"]
+# Built and fully verified. The table carries exactly the eleven specified columns
+# against the isolated, trigger-capable MySQL instance on port 3307, with the
+# three CHECK constraints, both UNIQUE indexes, both reconciliation-scan indexes,
+# and a foreign key that declares no referential action. All 26 actionable
+# OpenSpec tasks are complete; 46 new tests pass (147 across the full suite),
+# 0 failed and 0 skipped.
+#
+# Two decisions were deliberately NOT made, and both are recorded:
+#   - H-6 / D1 (status column) stays 🟠 Proposed. The table has NO `status`
+#     column. A separate reversible migration is prepared at
+#     `database/migrations/pending/` and is mechanically unreachable by the
+#     migration runner, so applying it — and thereby deciding H-6 — cannot
+#     happen by accident.
+#   - M-2 (canonicalization) stays ⚪ BLOCKED and M-3 (genesis literal) stays
+#     ⚪ OPEN. No hash is computed, verified or chained anywhere in this change,
+#     and the hashed-body field list is not fixed by this schema.
+#
+# The `transactions` foreign key is an OMISSION, not a decision: the table
+# belongs to Epic 3 and does not exist. The column and its index are created
+# exactly as specified, so Epic 3 adds the constraint with no data movement.
+#
+# Append-only is NOT yet enforced at the data layer. The BEFORE UPDATE /
+# BEFORE DELETE triggers are story 3; the privilege revocation is G4, an
+# infrastructure task. This story does not claim the guarantee is held.
+status = "built"
+
+[[story]]
+id = "3"
+slug = "ledger-entry-immutability-triggers"
+title = "Append-only enforcement: UPDATE/DELETE triggers and the cascade prohibition"
+covers = ["R7"]
+prerequisites = ["2"]
+# Built and fully verified. `ledger_entries` now carries two mandatory,
+# fail-closed triggers - `trg_ledger_entries_no_update` (BEFORE UPDATE) and
+# `trg_ledger_entries_no_delete` (BEFORE DELETE) - each signalling SQLSTATE
+# 45000. Both bodies are UNCONDITIONAL: they reject every UPDATE and every
+# DELETE without comparing values, so a column added later is protected
+# without the trigger being modified.
+#
+# AC6 is proven, not asserted: a direct UPDATE, a direct DELETE, a no-op
+# UPDATE, an UPDATE of the non-hashed `balance_after` column, and an
+# unqualified DELETE are all rejected by the SERVER with SQLSTATE 45000, the
+# row is left byte-identical after a rejected UPDATE, and no row is removed by
+# a rejected DELETE. The rejection holds from a PRIVILEGED session - the
+# suite's role holds ALL PRIVILEGES on the schema - which is exactly the case
+# AC6 names and the case a privilege grant alone could not cover.
+#
+# The migration is FAIL-CLOSED: it drops `ledger_entries` on the failure path
+# rather than leaving a table carrying only one of the two triggers, because
+# MySQL DDL is not transactional and a half-enforced schema looks correct in
+# `SHOW CREATE TABLE`. The fail-closed path was measured directly - the second
+# trigger was made to fail with invalid DDL, and the outcome was verified:
+# table absent, zero triggers, zero orphaned triggers.
+#
+# MECHANISM 3 (no cascade) is re-asserted against the live DDL. The two
+# foreign keys still to come - `fk_ledger_entries_transaction` (Epic 3) and
+# `chain_close_records.entry_id` (story 5) - are recorded as carrying the same
+# obligation, because a cascade from either would silently destroy ledger
+# history.
+#
+# MECHANISM 1 (the runtime role holding INSERT/SELECT but not UPDATE/DELETE)
+# is G4 - an infrastructure task, not a migration - and is NOT implemented.
+# No owner is recorded for it. The append-only guarantee is real and enforced
+# at the data layer, but it is not complete in the spine's full three-part
+# sense, and this ticket does not claim otherwise.
+#
+# 18 new tests pass; 165 across the full suite, 0 failed and 0 skipped.
+status = "built"
+
+[[story]]
+id = "4"
+slug = "account-sequence-allocator"
+title = "Per-account sequence allocation: the counter, the conditional increment, and the lock order"
+covers = ["R8", "R9"]
+prerequisites = ["1"]
+status = "ready"
+
+[[story]]
+id = "5"
+slug = "chain-head-and-close-records"
+title = "The chain head singleton and the chain-close record table"
+covers = ["R11", "R12", "R14"]
+prerequisites = ["1"]
+status = "ready"
+
+[[story]]
+id = "6"
+slug = "ledger-models-and-scopes"
+title = "Eloquent models, the money cast, and the read scopes that forbid negative balances"
+covers = ["R1", "R2", "R3", "R5", "R13"]
+prerequisites = ["1", "2", "5"]
+status = "ready"
+
+[[story]]
+id = "7"
+slug = "audit-outbox-table"
+title = "The audit_outbox table: atomic intent with no foreign key to the hot path"
+covers = ["R15"]
+prerequisites = ["1"]
+status = "ready"
+
+[[story]]
+id = "8"
+slug = "hashing-module-interface"
+title = "The hashing module's interface and injection point, with the implementation deferred"
+covers = ["R10"]
+prerequisites = ["2"]
+status = "blocked"
+
+[[story]]
+id = "9"
+slug = "ledger-invariants-and-verifier"
+title = "The ledger's own invariants: double-entry check, sequence continuity, and the chain verifier"
+covers = ["R5", "R8", "R10", "R13"]
+prerequisites = ["4", "8"]
+status = "blocked"

@@ -1,0 +1,80 @@
+schema: spec-driven
+
+# Project context (optional)
+# Add only constraints that should guide OpenSpec artifacts and workflows.
+# Include constraints an agent cannot infer by reading the code.
+# Keep general project documentation and discoverable codebase facts out.
+context: |
+  This project runs the BMAD Method (ticket tree under `_bmad-output/`) alongside OpenSpec.
+  OpenSpec is the implementation-facing layer; BMAD remains the source of requirements and status.
+
+  ## Authoritative inputs for any change
+  - `../P2P_SPECIFICATION.md` — the authoritative specification. UNMODIFIED. Its section numbers
+    (SPEC §4.2, §5.1, §7.3, §7.4, §9.2, §10.2, §14.1) are cited in artifacts.
+  - `_bmad-output/planning-artifacts/grill-me-decision-register.md` — decision status authority.
+  - `_bmad-output/initiative-p2p-settlement/initiative-p2p-settlement.md` — the initiative ticket
+    (R1–R30, AC1–AC18), including §7's reconciliation of D1–D4.
+  - `_bmad-output/initiative-p2p-settlement/architecture-p2p-settlement/architecture-p2p-settlement.md`
+    — the architecture spine (A1–A18) and the MySQL 8.0 data model.
+  - `_bmad-output/initiative-p2p-settlement/tickets/epic-ledger-core/` — the refined Epic 1 ticket,
+    its nine stories, and the consolidated approval checklist.
+
+  ## Approval ceiling — binding on every artifact
+  No requirement in this project is finally approved. Decision tiers, and they MUST be preserved
+  verbatim wherever a decision is referenced:
+  - 🟡 Provisional
+  - 🟠 Proposed (not approved)
+  - ⚪ Open
+  - ⏸️ Deferred
+  - ✅ Technical default (unconfirmed)
+  - ⚙️ Architecture default (a spine choice the requirement layer did not fix)
+  - ❌ Withdrawn
+
+  Any architecture choice that is not backed by a 🟡 or better decision MUST be marked PENDING
+  approval in the artifact that relies on it, and MUST be listed as such. Never write an
+  unapproved choice as though it were settled.
+
+  ## Non-negotiable product constraints
+  - MySQL 8.0 InnoDB, `sql_mode` includes STRICT_TRANS_TABLES. Laravel 13 / PHP 8.3 / React 19.
+  - Money is `BIGINT UNSIGNED` in integer minor units (Poisha, 1 BDT = 100 Poisha). No floats, no
+    DECIMAL, ever, anywhere in the money path.
+  - The ledger is append-only. Corrections are compensating entries, never edits.
+  - `transactions.status` and `wallets.reserved_minor` are rebuildable projections. The ledger
+    wins when they disagree.
+  - The marketplace is Phase 2 (H-4) and must not appear in Phase 1 artifacts.
+  - No real-money production enablement is authorised. Production transfers and production
+    reversals stay disabled until OQ-1, OQ-2, OQ-3 and OQ-4 are explicitly approved.
+
+# Per-artifact rules (optional)
+# Add custom rules for specific artifacts.
+rules:
+  proposal:
+    - Cite the BMAD requirement ids (R<n>), acceptance criteria (AC<n>), spine ids (A<n>), and
+      decision ids (C-1, H-6, M-2 ...) that each part of the proposal derives from.
+    - State explicitly which decisions are still unapproved, and mark architecture choices that
+      lack an approved decision as PENDING.
+    - State what is out of scope, including the later BMAD stories this change does not cover.
+  design:
+    - Record the MySQL 8.0 DDL shape for every table the change touches, with the constraint
+      names that carry a guarantee.
+    - Name the data-layer enforcement for every financial invariant, not just the application
+      code path.
+  tasks:
+    - Break tasks into chunks that are independently testable.
+    - Mark every task that is blocked by an open decision as blocked, and name the decision.
+    - Never include a task that runs a migration against a live database, changes .env, commits,
+      or pushes.
+
+# Per-operation guidance (optional)
+# Add advisory guidance for how apply and archive work should be conducted.
+# This is separate from artifact rules above.
+operations:
+  apply:
+    guidance:
+      - Re-read the BMAD ticket and the approval checklist before writing code; a decision may
+        have been ticked since the proposal was written.
+      - Do not implement a requirement whose decision is still unapproved without flagging it.
+  archive:
+    guidance:
+      - Summarize the archive outcome before finishing.
+
