@@ -8,7 +8,7 @@ import {
     CardHeader,
     CardTitle,
 } from '@/components/ui/card';
-import { EmptyState, StatusBadge } from '@/p2p/components';
+import { EmptyState } from '@/p2p/components';
 import { formatMoney } from '@/p2p/money';
 
 type FundingRow = {
@@ -75,7 +75,9 @@ export default function FundingHistory({
                     </div>
                 </div>
 
-                <p className="text-xs text-muted-foreground">{environmentLabel}</p>
+                <p className="text-xs text-muted-foreground">
+                    {environmentLabel}
+                </p>
 
                 <Card>
                     <CardHeader>
@@ -107,7 +109,8 @@ export default function FundingHistory({
                                                 {row.methodLabel}
                                             </Link>
                                             <p className="truncate text-xs text-muted-foreground">
-                                                {row.reference} · {row.createdAt}
+                                                {row.reference} ·{' '}
+                                                {row.createdAt}
                                             </p>
                                             {row.failureReason && (
                                                 <p className="mt-0.5 text-xs text-muted-foreground">
@@ -123,14 +126,17 @@ export default function FundingHistory({
                                                         : 'text-muted-foreground'
                                                 }`}
                                             >
-                                                {row.status === 'SUCCEEDED' ? '+' : ''}
+                                                {row.status === 'SUCCEEDED'
+                                                    ? '+'
+                                                    : ''}
                                                 {formatMoney(row.amountMinor)}
                                             </span>
                                             <span
                                                 className={`inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium ${
                                                     row.status === 'SUCCEEDED'
                                                         ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
-                                                        : row.status === 'FAILED'
+                                                        : row.status ===
+                                                            'FAILED'
                                                           ? 'bg-destructive/10 text-destructive dark:text-red-400'
                                                           : row.status ===
                                                               'CANCELLED'

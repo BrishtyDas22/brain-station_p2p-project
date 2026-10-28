@@ -25,7 +25,11 @@ import {
     StatusBadge,
 } from '@/p2p/components';
 import { formatMoney } from '@/p2p/money';
-import type { KycStatus, LedgerDirection, TransactionStatus } from '@/p2p/types';
+import type {
+    KycStatus,
+    LedgerDirection,
+    TransactionStatus,
+} from '@/p2p/types';
 
 type RecentTransaction = {
     id: number;
@@ -66,7 +70,6 @@ export default function Dashboard({
     account,
     wallet,
     kycStatus,
-    kycLabel,
     recentTransactions,
     totals,
     lending,
@@ -87,7 +90,9 @@ export default function Dashboard({
                                     Wallet balance
                                 </p>
                                 <p className="mt-2 text-4xl font-semibold tracking-tight tabular-nums">
-                                    {hasWallet ? formatMoney(wallet.balanceMinor) : '৳0.00'}
+                                    {hasWallet
+                                        ? formatMoney(wallet.balanceMinor)
+                                        : '৳0.00'}
                                 </p>
                                 <p className="mt-1 text-sm opacity-80">
                                     {hasWallet
@@ -190,8 +195,8 @@ export default function Dashboard({
 
                 <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border bg-card px-5 py-4">
                     <p className="text-sm text-muted-foreground">
-                        Borrow ৳5,000 – ৳50,000, or fund another member&apos;s loan
-                        from your own wallet balance.
+                        Borrow ৳5,000 – ৳50,000, or fund another member&apos;s
+                        loan from your own wallet balance.
                     </p>
                     <div className="flex flex-wrap gap-2">
                         <Button asChild variant="outline" size="sm">
@@ -213,7 +218,8 @@ export default function Dashboard({
                                 <div>
                                     <CardTitle>Recent activity</CardTitle>
                                     <CardDescription>
-                                        Movements recorded against your ledger account.
+                                        Movements recorded against your ledger
+                                        account.
                                     </CardDescription>
                                 </div>
                                 <Button asChild variant="outline" size="sm">
@@ -240,17 +246,25 @@ export default function Dashboard({
                                                     href={`/transactions/${transaction.id}`}
                                                     className="truncate text-sm font-medium hover:underline"
                                                 >
-                                                    {transaction.counterpartyName || '—'}
+                                                    {transaction.counterpartyName ||
+                                                        '—'}
                                                 </Link>
                                                 <p className="truncate text-xs text-muted-foreground">
-                                                    {transaction.reference} · {transaction.createdAt}
+                                                    {transaction.reference} ·{' '}
+                                                    {transaction.createdAt}
                                                 </p>
                                             </div>
                                             <div className="flex shrink-0 items-center gap-3">
-                                                <StatusBadge status={transaction.status} />
+                                                <StatusBadge
+                                                    status={transaction.status}
+                                                />
                                                 <DirectionAmount
-                                                    amountMinor={transaction.amountMinor}
-                                                    direction={transaction.direction}
+                                                    amountMinor={
+                                                        transaction.amountMinor
+                                                    }
+                                                    direction={
+                                                        transaction.direction
+                                                    }
                                                 />
                                             </div>
                                         </li>
@@ -274,9 +288,13 @@ export default function Dashboard({
                                     <Landmark className="size-4" />
                                 </span>
                                 <div className="min-w-0">
-                                    <p className="text-xs text-muted-foreground">Account ID</p>
+                                    <p className="text-xs text-muted-foreground">
+                                        Account ID
+                                    </p>
                                     <p className="truncate text-sm font-medium">
-                                        {account ? `#${account.id}` : 'Not provisioned'}
+                                        {account
+                                            ? `#${account.id}`
+                                            : 'Not provisioned'}
                                     </p>
                                 </div>
                             </div>
@@ -286,9 +304,13 @@ export default function Dashboard({
                                     <WalletIcon className="size-4" />
                                 </span>
                                 <div className="min-w-0">
-                                    <p className="text-xs text-muted-foreground">Next sequence</p>
+                                    <p className="text-xs text-muted-foreground">
+                                        Next sequence
+                                    </p>
                                     <p className="truncate text-sm font-medium">
-                                        {account ? account.nextSequenceNumber : '—'}
+                                        {account
+                                            ? account.nextSequenceNumber
+                                            : '—'}
                                     </p>
                                 </div>
                             </div>
@@ -298,7 +320,9 @@ export default function Dashboard({
                                     <ShieldCheck className="size-4" />
                                 </span>
                                 <div className="min-w-0">
-                                    <p className="text-xs text-muted-foreground">Currency</p>
+                                    <p className="text-xs text-muted-foreground">
+                                        Currency
+                                    </p>
                                     <p className="truncate text-sm font-medium">
                                         {account?.currency ?? 'BDT'}
                                     </p>
@@ -310,7 +334,9 @@ export default function Dashboard({
                                     <ShieldCheck className="size-4" />
                                 </span>
                                 <div className="min-w-0">
-                                    <p className="text-xs text-muted-foreground">KYC status</p>
+                                    <p className="text-xs text-muted-foreground">
+                                        KYC status
+                                    </p>
                                     <div className="truncate text-sm font-medium">
                                         <KycBadge status={kycStatus} />
                                     </div>

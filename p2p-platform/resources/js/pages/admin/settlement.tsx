@@ -8,7 +8,12 @@ import {
     CardTitle,
 } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { DataTable, NoticeBanner, EmptyState, StatTile } from '@/p2p/components';
+import {
+    DataTable,
+    NoticeBanner,
+    EmptyState,
+    StatTile,
+} from '@/p2p/components';
 import { formatMoney } from '@/p2p/money';
 import { cn } from '@/lib/utils';
 
@@ -57,10 +62,10 @@ export default function AdminSettlement({ batches, totals }: SettlementProps) {
 
             <div className="space-y-6">
                 <NoticeBanner tone="info">
-                    Settlement batches are read from the database. The settlement
-                    network itself is not connected — no batch is dispatched to a bank or
-                    mobile operator, and no settled figure here represents money in
-                    transit.
+                    Settlement batches are read from the database. The
+                    settlement network itself is not connected — no batch is
+                    dispatched to a bank or mobile operator, and no settled
+                    figure here represents money in transit.
                 </NoticeBanner>
 
                 <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -94,7 +99,8 @@ export default function AdminSettlement({ batches, totals }: SettlementProps) {
                     <CardHeader>
                         <CardTitle>Settlement batches</CardTitle>
                         <CardDescription>
-                            Each batch groups ledger entries for a single network.
+                            Each batch groups ledger entries for a single
+                            network.
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
@@ -118,11 +124,16 @@ export default function AdminSettlement({ batches, totals }: SettlementProps) {
                                 ]}
                             >
                                 {batches.map((batch) => (
-                                    <tr key={batch.id} className="hover:bg-muted/30">
+                                    <tr
+                                        key={batch.id}
+                                        className="hover:bg-muted/30"
+                                    >
                                         <td className="px-4 py-3 font-mono text-xs font-medium">
                                             {batch.reference}
                                         </td>
-                                        <td className="px-4 py-3">{batch.network}</td>
+                                        <td className="px-4 py-3">
+                                            {batch.network}
+                                        </td>
                                         <td className="px-4 py-3">
                                             <Badge
                                                 variant="outline"
@@ -140,7 +151,7 @@ export default function AdminSettlement({ batches, totals }: SettlementProps) {
                                         <td className="px-4 py-3 tabular-nums">
                                             {formatMoney(batch.totalMinor)}
                                         </td>
-                                        <td className="px-4 py-3 tabular-nums text-muted-foreground">
+                                        <td className="px-4 py-3 text-muted-foreground tabular-nums">
                                             {formatMoney(batch.feeMinor)}
                                         </td>
                                         <td className="px-4 py-3 font-medium tabular-nums">

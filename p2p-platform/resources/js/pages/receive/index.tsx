@@ -40,14 +40,18 @@ export default function ReceiveMoney({
     incoming,
     availability,
 }: ReceiveProps) {
-    const accountLabel = wallet.accountId ? `ACC-${wallet.accountId}` : 'Not provisioned';
+    const accountLabel = wallet.accountId
+        ? `ACC-${wallet.accountId}`
+        : 'Not provisioned';
 
     return (
         <>
             <Head title="Receive money" />
 
             <div className="space-y-6">
-                <NoticeBanner tone="blocked">{availability.reason}</NoticeBanner>
+                <NoticeBanner tone="blocked">
+                    {availability.reason}
+                </NoticeBanner>
 
                 <div className="grid gap-4 sm:grid-cols-3">
                     <StatTile
@@ -74,8 +78,8 @@ export default function ReceiveMoney({
                     <CardHeader>
                         <CardTitle>How money reaches your wallet</CardTitle>
                         <CardDescription>
-                            On a lending platform the loan workflow does the work
-                            that a one-to-one transfer would otherwise do.
+                            On a lending platform the loan workflow does the
+                            work that a one-to-one transfer would otherwise do.
                         </CardDescription>
                     </CardHeader>
                     <CardContent className="grid gap-4 sm:grid-cols-3">
@@ -83,7 +87,9 @@ export default function ReceiveMoney({
                             <span className="flex size-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
                                 <Banknote className="size-4" />
                             </span>
-                            <p className="text-sm font-medium">Loan disbursement</p>
+                            <p className="text-sm font-medium">
+                                Loan disbursement
+                            </p>
                             <p className="text-xs text-muted-foreground">
                                 When lenders fund your request to 100%, the
                                 principal is released from escrow into your
@@ -111,8 +117,8 @@ export default function ReceiveMoney({
                             </p>
                             <p className="text-xs text-muted-foreground">
                                 As a lender, each installment a borrower pays is
-                                split across lenders in proportion to what
-                                they committed.
+                                split across lenders in proportion to what they
+                                committed.
                             </p>
                             <p className="text-sm font-semibold tabular-nums">
                                 {formatMoney(incoming.committedMinor)} committed
@@ -156,9 +162,9 @@ export default function ReceiveMoney({
                         <CardHeader>
                             <CardTitle>Receive via account reference</CardTitle>
                             <CardDescription>
-                                Share the reference below with a sender. A transfer
-                                engine is required before an inbound payment can be
-                                matched to this account.
+                                Share the reference below with a sender. A
+                                transfer engine is required before an inbound
+                                payment can be matched to this account.
                             </CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-4">
@@ -170,7 +176,9 @@ export default function ReceiveMoney({
                                     variant="ghost"
                                     size="sm"
                                     onClick={() =>
-                                        navigator.clipboard?.writeText(accountLabel)
+                                        navigator.clipboard?.writeText(
+                                            accountLabel,
+                                        )
                                     }
                                     aria-label="Copy account reference"
                                 >
@@ -179,13 +187,24 @@ export default function ReceiveMoney({
                             </div>
 
                             <dl className="divide-y">
-                                <DetailRow label="Wallet ID" value={wallet.id ? `#${wallet.id}` : '—'} mono />
                                 <DetailRow
-                                    label="Ledger account"
-                                    value={wallet.accountId ? `#${wallet.accountId}` : '—'}
+                                    label="Wallet ID"
+                                    value={wallet.id ? `#${wallet.id}` : '—'}
                                     mono
                                 />
-                                <DetailRow label="Currency" value={wallet.currency} />
+                                <DetailRow
+                                    label="Ledger account"
+                                    value={
+                                        wallet.accountId
+                                            ? `#${wallet.accountId}`
+                                            : '—'
+                                    }
+                                    mono
+                                />
+                                <DetailRow
+                                    label="Currency"
+                                    value={wallet.currency}
+                                />
                                 <DetailRow
                                     label="Opened"
                                     value={wallet.createdAt || '—'}
@@ -198,8 +217,9 @@ export default function ReceiveMoney({
                         <CardHeader>
                             <CardTitle>Request by QR</CardTitle>
                             <CardDescription>
-                                A payment request encodes the account reference and an
-                                amount. The QR image is not generated yet.
+                                A payment request encodes the account reference
+                                and an amount. The QR image is not generated
+                                yet.
                             </CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-4">
@@ -212,7 +232,11 @@ export default function ReceiveMoney({
                                 </div>
                             </div>
 
-                            <Button variant="outline" disabled className="w-full">
+                            <Button
+                                variant="outline"
+                                disabled
+                                className="w-full"
+                            >
                                 <Download className="size-4" />
                                 Download QR — not yet available
                             </Button>

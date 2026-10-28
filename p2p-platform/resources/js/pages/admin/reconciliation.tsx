@@ -26,7 +26,11 @@ type ReconciliationProps = {
         credits: number;
         entryCount: number;
     }[];
-    sequenceViolations: { accountId: number; expected: number; found: number }[];
+    sequenceViolations: {
+        accountId: number;
+        expected: number;
+        found: number;
+    }[];
     mapping: { walletsWithoutAccount: number; accountsWithoutWallet: number };
     chainVerification: { available: boolean; reason: string };
 };
@@ -45,7 +49,9 @@ export default function AdminReconciliation({
             <Head title="Reconciliation" />
 
             <div className="space-y-6">
-                <NoticeBanner tone={chainVerification.available ? 'success' : 'blocked'}>
+                <NoticeBanner
+                    tone={chainVerification.available ? 'success' : 'blocked'}
+                >
                     {chainVerification.reason}
                 </NoticeBanner>
 
@@ -93,7 +99,11 @@ export default function AdminReconciliation({
                                 : `${doubleEntryViolations.length} unbalanced`
                         }
                         hint="SUM(DEBIT) = SUM(CREDIT) per transaction"
-                        accent={doubleEntryViolations.length === 0 ? 'success' : 'danger'}
+                        accent={
+                            doubleEntryViolations.length === 0
+                                ? 'success'
+                                : 'danger'
+                        }
                     />
                     <StatTile
                         label="Sequence continuity"
@@ -103,7 +113,11 @@ export default function AdminReconciliation({
                                 : `${sequenceViolations.length} gaps`
                         }
                         hint="Each account runs 1..n with no gap"
-                        accent={sequenceViolations.length === 0 ? 'success' : 'danger'}
+                        accent={
+                            sequenceViolations.length === 0
+                                ? 'success'
+                                : 'danger'
+                        }
                     />
                     <StatTile
                         label="Wallet mapping"
@@ -129,7 +143,8 @@ export default function AdminReconciliation({
                     <CardHeader>
                         <CardTitle>Double-entry violations</CardTitle>
                         <CardDescription>
-                            Transactions whose debits do not equal their credits.
+                            Transactions whose debits do not equal their
+                            credits.
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
@@ -156,14 +171,19 @@ export default function AdminReconciliation({
                                             #{violation.transactionId}
                                         </td>
                                         <td className="px-4 py-3 tabular-nums">
-                                            {(violation.debits / 100).toFixed(2)}
+                                            {(violation.debits / 100).toFixed(
+                                                2,
+                                            )}
                                         </td>
                                         <td className="px-4 py-3 tabular-nums">
-                                            {(violation.credits / 100).toFixed(2)}
+                                            {(violation.credits / 100).toFixed(
+                                                2,
+                                            )}
                                         </td>
-                                        <td className="px-4 py-3 font-medium tabular-nums text-destructive">
+                                        <td className="px-4 py-3 font-medium text-destructive tabular-nums">
                                             {(
-                                                (violation.debits - violation.credits) /
+                                                (violation.debits -
+                                                    violation.credits) /
                                                 100
                                             ).toFixed(2)}
                                         </td>
@@ -204,8 +224,8 @@ export default function AdminReconciliation({
                                                 variant="outline"
                                                 className="border-destructive/30 bg-destructive/10 text-destructive dark:text-red-400"
                                             >
-                                                expected {violation.expected}, found{' '}
-                                                {violation.found}
+                                                expected {violation.expected},
+                                                found {violation.found}
                                             </Badge>
                                         </li>
                                     ))}
@@ -218,9 +238,10 @@ export default function AdminReconciliation({
                         <CardHeader>
                             <CardTitle>Wallet / account mapping</CardTitle>
                             <CardDescription>
-                                Orphans in either direction. A wallet must belong to
-                                exactly one account, and the relationship cannot be
-                                repointed or the account deleted.
+                                Orphans in either direction. A wallet must
+                                belong to exactly one account, and the
+                                relationship cannot be repointed or the account
+                                deleted.
                             </CardDescription>
                         </CardHeader>
                         <CardContent>

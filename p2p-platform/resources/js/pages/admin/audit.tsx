@@ -47,7 +47,9 @@ export default function AdminAudit({
             <Head title="Ledger & audit" />
 
             <div className="space-y-6">
-                <NoticeBanner tone={chainVerification.available ? 'success' : 'blocked'}>
+                <NoticeBanner
+                    tone={chainVerification.available ? 'success' : 'blocked'}
+                >
                     {chainVerification.reason}
                 </NoticeBanner>
 
@@ -75,9 +77,9 @@ export default function AdminAudit({
                     <CardHeader>
                         <CardTitle>Audit chain</CardTitle>
                         <CardDescription>
-                            The audit trail is read-only. Every record carries a gapless
-                            sequence number allocated under a row lock, and a denial is
-                            recorded exactly like an approval.
+                            The audit trail is read-only. Every record carries a
+                            gapless sequence number allocated under a row lock,
+                            and a denial is recorded exactly like an approval.
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
@@ -97,7 +99,10 @@ export default function AdminAudit({
                                 ]}
                             >
                                 {rows.map((record) => (
-                                    <tr key={record.id} className="hover:bg-muted/30">
+                                    <tr
+                                        key={record.id}
+                                        className="hover:bg-muted/30"
+                                    >
                                         <td className="px-4 py-3 font-mono text-xs tabular-nums">
                                             {record.sequence}
                                         </td>

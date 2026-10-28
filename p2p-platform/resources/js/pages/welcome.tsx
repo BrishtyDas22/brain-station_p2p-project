@@ -62,7 +62,9 @@ export default function Welcome() {
                                 aria-label="Toggle theme"
                                 onClick={() =>
                                     updateAppearance(
-                                        resolvedAppearance === 'dark' ? 'light' : 'dark',
+                                        resolvedAppearance === 'dark'
+                                            ? 'light'
+                                            : 'dark',
                                     )
                                 }
                             >
@@ -86,7 +88,9 @@ export default function Welcome() {
                                         <Link href="/login">Log in</Link>
                                     </Button>
                                     <Button asChild>
-                                        <Link href="/register">Create account</Link>
+                                        <Link href="/register">
+                                            Create account
+                                        </Link>
                                     </Button>
                                 </>
                             )}
@@ -115,9 +119,9 @@ export default function Welcome() {
 
                             <p className="mx-auto mt-5 max-w-2xl text-base text-pretty text-muted-foreground sm:text-lg">
                                 A settlement platform built on an append-only,
-                                double-entry ledger. Balances are never invented —
-                                they are read from the database, and every transfer
-                                leaves an auditable trail.
+                                double-entry ledger. Balances are never invented
+                                — they are read from the database, and every
+                                transfer leaves an auditable trail.
                             </p>
 
                             <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
@@ -136,7 +140,11 @@ export default function Welcome() {
                                                 <ArrowRight className="size-4" />
                                             </Link>
                                         </Button>
-                                        <Button asChild size="lg" variant="outline">
+                                        <Button
+                                            asChild
+                                            size="lg"
+                                            variant="outline"
+                                        >
                                             <Link href="/login">Log in</Link>
                                         </Button>
                                     </>
@@ -187,13 +195,14 @@ export default function Welcome() {
                                 What is live today
                             </h2>
                             <p className="mt-2 max-w-3xl text-sm text-muted-foreground">
-                                Accounts, profiles, KYC, roles, wallets, transaction
-                                history, the audit chain and the reconciliation checks
-                                all read and write the real database. The transfer
-                                engine itself is not yet implemented, so the send
-                                and receive screens are clearly marked as not yet
-                                available and refuse to move money. We would rather
-                                show an honest gap than a convincing fake.
+                                Accounts, profiles, KYC, roles, wallets,
+                                transaction history, the audit chain and the
+                                reconciliation checks all read and write the
+                                real database. The transfer engine itself is not
+                                yet implemented, so the send and receive screens
+                                are clearly marked as not yet available and
+                                refuse to move money. We would rather show an
+                                honest gap than a convincing fake.
                             </p>
                         </div>
                     </div>
@@ -202,8 +211,14 @@ export default function Welcome() {
                 {/* Footer */}
                 <footer className="border-t">
                     <div className="mx-auto flex max-w-6xl flex-col gap-2 px-4 py-8 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between lg:px-6">
-                        <p>P2P Settle — Laravel 13 · React 19 · Inertia · MySQL 8</p>
-                        <p>Money is stored as integer Poisha. No floating-point.</p>
+                        <p>
+                            P2P Settle — Laravel 13 · React 19 · Inertia · MySQL
+                            8
+                        </p>
+                        <p>
+                            Money is stored as integer Poisha. No
+                            floating-point.
+                        </p>
                     </div>
                 </footer>
             </div>

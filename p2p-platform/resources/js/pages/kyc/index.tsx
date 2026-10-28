@@ -1,5 +1,11 @@
 import { Head, useForm } from '@inertiajs/react';
-import { CheckCircle2, Circle, FileText, ShieldCheck, XCircle } from 'lucide-react';
+import {
+    CheckCircle2,
+    Circle,
+    FileText,
+    ShieldCheck,
+    XCircle,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
     Card,
@@ -46,7 +52,12 @@ type KycProps = {
     documentTypes: string[];
 };
 
-export default function Kyc({ submission, status, statusLabel, documentTypes }: KycProps) {
+export default function Kyc({
+    submission,
+    status,
+    statusLabel,
+    documentTypes,
+}: KycProps) {
     const form = useForm({
         full_name: '',
         document_type: documentTypes[0] ?? 'National ID (NID)',
@@ -63,7 +74,10 @@ export default function Kyc({ submission, status, statusLabel, documentTypes }: 
         submission.status === 'NOT_SUBMITTED' ||
         submission.status === 'REJECTED';
 
-    const steps: { label: string; state: 'done' | 'current' | 'todo' | 'failed' }[] = [
+    const steps: {
+        label: string;
+        state: 'done' | 'current' | 'todo' | 'failed';
+    }[] = [
         {
             label: 'Submitted',
             state:
@@ -108,8 +122,8 @@ export default function Kyc({ submission, status, statusLabel, documentTypes }: 
                                     Identity verification
                                 </CardTitle>
                                 <CardDescription>
-                                    Your details are stored in the database and reviewed by
-                                    an administrator.
+                                    Your details are stored in the database and
+                                    reviewed by an administrator.
                                 </CardDescription>
                             </div>
                             <KycBadge status={status} />
@@ -160,9 +174,9 @@ export default function Kyc({ submission, status, statusLabel, documentTypes }: 
 
                         {submission === null ? (
                             <NoticeBanner tone="info">
-                                You have not submitted any identity details yet. The form
-                                below writes a real row to the database — nothing here is
-                                simulated.
+                                You have not submitted any identity details yet.
+                                The form below writes a real row to the database
+                                — nothing here is simulated.
                             </NoticeBanner>
                         ) : (
                             <>
@@ -178,22 +192,26 @@ export default function Kyc({ submission, status, statusLabel, documentTypes }: 
 
                                 {submission.status === 'APPROVED' && (
                                     <NoticeBanner tone="success">
-                                        Your identity has been verified by an administrator.
-                                        Your wallet is provisioned with a zero balance.
-                                        Actual money transfers are not enabled yet.
+                                        Your identity has been verified by an
+                                        administrator. Your wallet is
+                                        provisioned with a zero balance. Actual
+                                        money transfers are not enabled yet.
                                     </NoticeBanner>
                                 )}
 
                                 {submission.status === 'PENDING' && (
                                     <NoticeBanner tone="info">
                                         Your submission is queued for review. An
-                                        administrator will move it to review and record a
-                                        decision.
+                                        administrator will move it to review and
+                                        record a decision.
                                     </NoticeBanner>
                                 )}
 
                                 <dl className="divide-y rounded-lg border">
-                                    <DetailRow label="Full name" value={submission.fullName} />
+                                    <DetailRow
+                                        label="Full name"
+                                        value={submission.fullName}
+                                    />
                                     <DetailRow
                                         label="Document type"
                                         value={submission.documentType}
@@ -211,7 +229,10 @@ export default function Kyc({ submission, status, statusLabel, documentTypes }: 
                                         label="Address"
                                         value={submission.addressLine || '—'}
                                     />
-                                    <DetailRow label="City" value={submission.city || '—'} />
+                                    <DetailRow
+                                        label="City"
+                                        value={submission.city || '—'}
+                                    />
                                     <DetailRow
                                         label="Country"
                                         value={submission.country || '—'}
@@ -226,7 +247,9 @@ export default function Kyc({ submission, status, statusLabel, documentTypes }: 
                                     />
                                     <DetailRow
                                         label="Reviewed"
-                                        value={submission.reviewedAt ?? 'Pending'}
+                                        value={
+                                            submission.reviewedAt ?? 'Pending'
+                                        }
                                     />
                                     <DetailRow
                                         label="Reviewer"
@@ -249,20 +272,25 @@ export default function Kyc({ submission, status, statusLabel, documentTypes }: 
                                     : 'Submit your details'}
                             </CardTitle>
                             <CardDescription>
-                                These values are validated on the server and written to
-                                MySQL.
+                                These values are validated on the server and
+                                written to MySQL.
                             </CardDescription>
                         </CardHeader>
                         <CardContent>
                             <form onSubmit={submit} className="space-y-5">
                                 <div className="grid gap-4 sm:grid-cols-2">
                                     <div className="space-y-2">
-                                        <Label htmlFor="full_name">Full name</Label>
+                                        <Label htmlFor="full_name">
+                                            Full name
+                                        </Label>
                                         <Input
                                             id="full_name"
                                             value={form.data.full_name}
                                             onChange={(event) =>
-                                                form.setData('full_name', event.target.value)
+                                                form.setData(
+                                                    'full_name',
+                                                    event.target.value,
+                                                )
                                             }
                                             required
                                             maxLength={120}
@@ -275,7 +303,9 @@ export default function Kyc({ submission, status, statusLabel, documentTypes }: 
                                     </div>
 
                                     <div className="space-y-2">
-                                        <Label htmlFor="mobile_number">Mobile number</Label>
+                                        <Label htmlFor="mobile_number">
+                                            Mobile number
+                                        </Label>
                                         <Input
                                             id="mobile_number"
                                             value={form.data.mobile_number}
@@ -305,7 +335,10 @@ export default function Kyc({ submission, status, statusLabel, documentTypes }: 
                                         <Select
                                             value={form.data.document_type}
                                             onValueChange={(value) =>
-                                                form.setData('document_type', value)
+                                                form.setData(
+                                                    'document_type',
+                                                    value,
+                                                )
                                             }
                                         >
                                             <SelectTrigger id="document_type">
@@ -313,7 +346,10 @@ export default function Kyc({ submission, status, statusLabel, documentTypes }: 
                                             </SelectTrigger>
                                             <SelectContent>
                                                 {documentTypes.map((type) => (
-                                                    <SelectItem key={type} value={type}>
+                                                    <SelectItem
+                                                        key={type}
+                                                        value={type}
+                                                    >
                                                         {type}
                                                     </SelectItem>
                                                 ))}
@@ -381,7 +417,10 @@ export default function Kyc({ submission, status, statusLabel, documentTypes }: 
                                             id="city"
                                             value={form.data.city}
                                             onChange={(event) =>
-                                                form.setData('city', event.target.value)
+                                                form.setData(
+                                                    'city',
+                                                    event.target.value,
+                                                )
                                             }
                                             required
                                             maxLength={80}
@@ -399,7 +438,10 @@ export default function Kyc({ submission, status, statusLabel, documentTypes }: 
                                             id="country"
                                             value={form.data.country}
                                             onChange={(event) =>
-                                                form.setData('country', event.target.value)
+                                                form.setData(
+                                                    'country',
+                                                    event.target.value,
+                                                )
                                             }
                                             maxLength={2}
                                         />
@@ -412,12 +454,17 @@ export default function Kyc({ submission, status, statusLabel, documentTypes }: 
                                 </div>
 
                                 <div className="space-y-2">
-                                    <Label htmlFor="address_line">Address</Label>
+                                    <Label htmlFor="address_line">
+                                        Address
+                                    </Label>
                                     <Input
                                         id="address_line"
                                         value={form.data.address_line}
                                         onChange={(event) =>
-                                            form.setData('address_line', event.target.value)
+                                            form.setData(
+                                                'address_line',
+                                                event.target.value,
+                                            )
                                         }
                                         required
                                         maxLength={180}
@@ -429,8 +476,13 @@ export default function Kyc({ submission, status, statusLabel, documentTypes }: 
                                     )}
                                 </div>
 
-                                <Button type="submit" disabled={form.processing}>
-                                    {form.processing ? 'Submitting…' : 'Submit for review'}
+                                <Button
+                                    type="submit"
+                                    disabled={form.processing}
+                                >
+                                    {form.processing
+                                        ? 'Submitting…'
+                                        : 'Submit for review'}
                                 </Button>
                             </form>
                         </CardContent>
@@ -440,11 +492,13 @@ export default function Kyc({ submission, status, statusLabel, documentTypes }: 
                         <CardContent className="px-0">
                             <div className="px-6 py-10 text-center">
                                 <p className="font-medium">
-                                    Your submission is {statusLabel.toLowerCase()}.
+                                    Your submission is{' '}
+                                    {statusLabel.toLowerCase()}.
                                 </p>
                                 <p className="mt-1 text-sm text-muted-foreground">
-                                    The form is locked while a decision is pending. You can
-                                    edit your details again after a rejection.
+                                    The form is locked while a decision is
+                                    pending. You can edit your details again
+                                    after a rejection.
                                 </p>
                             </div>
                         </CardContent>

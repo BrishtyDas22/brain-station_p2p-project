@@ -23,7 +23,11 @@ import {
     EmptyState,
     StatusBadge,
 } from '@/p2p/components';
-import type { LedgerDirection, RiskLevel, TransactionStatus } from '@/p2p/types';
+import type {
+    LedgerDirection,
+    RiskLevel,
+    TransactionStatus,
+} from '@/p2p/types';
 
 type TransactionRow = {
     id: number;
@@ -94,7 +98,8 @@ export default function TransactionsIndex({
                             Filters
                         </CardTitle>
                         <CardDescription>
-                            Filtered on the server — the query runs against the database.
+                            Filtered on the server — the query runs against the
+                            database.
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
@@ -109,7 +114,9 @@ export default function TransactionsIndex({
                                 <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
                                 <Input
                                     value={search}
-                                    onChange={(event) => setSearch(event.target.value)}
+                                    onChange={(event) =>
+                                        setSearch(event.target.value)
+                                    }
                                     placeholder="Search by reference or counterparty…"
                                     className="pl-9"
                                     aria-label="Search transactions"
@@ -123,11 +130,16 @@ export default function TransactionsIndex({
                                     apply({ status: value });
                                 }}
                             >
-                                <SelectTrigger className="w-[170px]" aria-label="Status">
+                                <SelectTrigger
+                                    className="w-[170px]"
+                                    aria-label="Status"
+                                >
                                     <SelectValue placeholder="All statuses" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="ALL">All statuses</SelectItem>
+                                    <SelectItem value="ALL">
+                                        All statuses
+                                    </SelectItem>
                                     {statuses.map((option) => (
                                         <SelectItem key={option} value={option}>
                                             {option.replace(/_/g, ' ')}
@@ -143,13 +155,20 @@ export default function TransactionsIndex({
                                     apply({ direction: value });
                                 }}
                             >
-                                <SelectTrigger className="w-[150px]" aria-label="Direction">
+                                <SelectTrigger
+                                    className="w-[150px]"
+                                    aria-label="Direction"
+                                >
                                     <SelectValue placeholder="Both" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="ALL">Both directions</SelectItem>
+                                    <SelectItem value="ALL">
+                                        Both directions
+                                    </SelectItem>
                                     <SelectItem value="DEBIT">Sent</SelectItem>
-                                    <SelectItem value="CREDIT">Received</SelectItem>
+                                    <SelectItem value="CREDIT">
+                                        Received
+                                    </SelectItem>
                                 </SelectContent>
                             </Select>
 
@@ -165,8 +184,8 @@ export default function TransactionsIndex({
                                 <CardTitle>Transfer history</CardTitle>
                                 <CardDescription>
                                     {transactions.total ?? rows.length} movement
-                                    {transactions.total === 1 ? '' : 's'} recorded against
-                                    your ledger account.
+                                    {transactions.total === 1 ? '' : 's'}{' '}
+                                    recorded against your ledger account.
                                 </CardDescription>
                             </div>
                         </div>
@@ -192,7 +211,10 @@ export default function TransactionsIndex({
                                     ]}
                                 >
                                     {rows.map((row) => (
-                                        <tr key={row.id} className="hover:bg-muted/30">
+                                        <tr
+                                            key={row.id}
+                                            className="hover:bg-muted/30"
+                                        >
                                             <td className="px-4 py-3">
                                                 <Link
                                                     href={`/transactions/${row.id}`}
@@ -214,27 +236,36 @@ export default function TransactionsIndex({
                                             </td>
                                             <td className="px-4 py-3">
                                                 <span className="font-medium">
-                                                    {row.counterpartyName || '—'}
+                                                    {row.counterpartyName ||
+                                                        '—'}
                                                 </span>
                                                 {row.counterpartyAccount && (
                                                     <p className="font-mono text-xs text-muted-foreground">
-                                                        {row.counterpartyAccount}
+                                                        {
+                                                            row.counterpartyAccount
+                                                        }
                                                     </p>
                                                 )}
                                             </td>
                                             <td className="px-4 py-3">
                                                 <DirectionAmount
-                                                    amountMinor={row.amountMinor}
+                                                    amountMinor={
+                                                        row.amountMinor
+                                                    }
                                                     direction={row.direction}
                                                 />
                                             </td>
                                             <td className="px-4 py-3 text-muted-foreground tabular-nums">
                                                 {row.feeMinor === 0
                                                     ? '—'
-                                                    : (row.feeMinor / 100).toFixed(2)}
+                                                    : (
+                                                          row.feeMinor / 100
+                                                      ).toFixed(2)}
                                             </td>
                                             <td className="px-4 py-3">
-                                                <StatusBadge status={row.status} />
+                                                <StatusBadge
+                                                    status={row.status}
+                                                />
                                             </td>
                                             <td className="px-4 py-3 whitespace-nowrap text-muted-foreground">
                                                 {row.createdAt}
@@ -249,8 +280,8 @@ export default function TransactionsIndex({
                                         aria-label="Pagination"
                                     >
                                         <p className="text-xs text-muted-foreground">
-                                            Showing{' '}
-                                            {transactions.from ?? 0}–{transactions.to ?? 0} of{' '}
+                                            Showing {transactions.from ?? 0}–
+                                            {transactions.to ?? 0} of{' '}
                                             {transactions.total}
                                         </p>
                                         <div className="flex gap-2">
@@ -258,12 +289,14 @@ export default function TransactionsIndex({
                                                 variant="outline"
                                                 size="sm"
                                                 disabled={
-                                                    transactions.current_page <= 1
+                                                    transactions.current_page <=
+                                                    1
                                                 }
                                                 onClick={() =>
                                                     router.get(
                                                         `/transactions?page=${
-                                                            transactions.current_page - 1
+                                                            transactions.current_page -
+                                                            1
                                                         }&search=${encodeURIComponent(
                                                             filters.search,
                                                         )}&status=${filters.status}&direction=${filters.direction}`,
@@ -282,7 +315,8 @@ export default function TransactionsIndex({
                                                 onClick={() =>
                                                     router.get(
                                                         `/transactions?page=${
-                                                            transactions.current_page + 1
+                                                            transactions.current_page +
+                                                            1
                                                         }&search=${encodeURIComponent(
                                                             filters.search,
                                                         )}&status=${filters.status}&direction=${filters.direction}`,

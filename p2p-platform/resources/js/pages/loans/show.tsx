@@ -196,13 +196,13 @@ export default function LoanShow({
                                     {viewer.alreadyInvested ? (
                                         <NoticeBanner tone="success">
                                             You have already committed to this
-                                            loan. A lender may only fund a listing
-                                            once.
+                                            loan. A lender may only fund a
+                                            listing once.
                                         </NoticeBanner>
                                     ) : !viewer.isApproved ? (
                                         <NoticeBanner tone="blocked">
-                                            Your identity must be approved before
-                                            you can fund a loan.
+                                            Your identity must be approved
+                                            before you can fund a loan.
                                         </NoticeBanner>
                                     ) : (
                                         <>
@@ -224,7 +224,8 @@ export default function LoanShow({
                                                 >
                                                     <div className="space-y-2">
                                                         <Label htmlFor="amount">
-                                                            Amount to commit (BDT)
+                                                            Amount to commit
+                                                            (BDT)
                                                         </Label>
                                                         <Input
                                                             id="amount"
@@ -242,7 +243,8 @@ export default function LoanShow({
                                                                 )
                                                             }
                                                             aria-invalid={Boolean(
-                                                                fund.errors.amount,
+                                                                fund.errors
+                                                                    .amount,
                                                             )}
                                                         />
                                                         <p className="text-xs text-muted-foreground">
@@ -255,7 +257,10 @@ export default function LoanShow({
                                                         </p>
                                                         {fund.errors.amount && (
                                                             <p className="text-sm text-destructive">
-                                                                {fund.errors.amount}
+                                                                {
+                                                                    fund.errors
+                                                                        .amount
+                                                                }
                                                             </p>
                                                         )}
                                                     </div>
@@ -342,7 +347,7 @@ export default function LoanShow({
                                                         investment.amountMinor,
                                                     )}
                                                 </td>
-                                                <td className="px-4 py-3 tabular-nums text-muted-foreground">
+                                                <td className="px-4 py-3 text-muted-foreground tabular-nums">
                                                     {loan.fundedMinor > 0
                                                         ? `${Math.round(
                                                               (investment.amountMinor /
@@ -369,9 +374,12 @@ export default function LoanShow({
                                     <CardDescription>
                                         {installments.length} monthly
                                         installment
-                                        {installments.length === 1 ? '' : 's'} of{' '}
-                                        {formatMoney(totalRepayable)} in total,
-                                        including {formatMoney(totalInterest)} in
+                                        {installments.length === 1
+                                            ? ''
+                                            : 's'}{' '}
+                                        of {formatMoney(totalRepayable)} in
+                                        total, including{' '}
+                                        {formatMoney(totalInterest)} in
                                         interest.
                                     </CardDescription>
                                 </CardHeader>
@@ -400,7 +408,7 @@ export default function LoanShow({
                                                         installment.principalMinor,
                                                     )}
                                                 </td>
-                                                <td className="px-4 py-3 tabular-nums text-muted-foreground">
+                                                <td className="px-4 py-3 text-muted-foreground tabular-nums">
                                                     {formatMoney(
                                                         installment.interestMinor,
                                                     )}
@@ -419,24 +427,24 @@ export default function LoanShow({
                                                 </td>
                                                 <td className="px-4 py-3 text-right">
                                                     {viewer.isBorrower &&
-                                                    installment.status !==
-                                                        'PAID' && (
-                                                        <Button
-                                                            size="sm"
-                                                            variant="outline"
-                                                            type="button"
-                                                            disabled={
-                                                                collect.processing
-                                                            }
-                                                            onClick={() =>
-                                                                payInstallment(
-                                                                    installment.id,
-                                                                )
-                                                            }
-                                                        >
-                                                            Pay now
-                                                        </Button>
-                                                    )}
+                                                        installment.status !==
+                                                            'PAID' && (
+                                                            <Button
+                                                                size="sm"
+                                                                variant="outline"
+                                                                type="button"
+                                                                disabled={
+                                                                    collect.processing
+                                                                }
+                                                                onClick={() =>
+                                                                    payInstallment(
+                                                                        installment.id,
+                                                                    )
+                                                                }
+                                                            >
+                                                                Pay now
+                                                            </Button>
+                                                        )}
                                                 </td>
                                             </tr>
                                         ))}
@@ -455,8 +463,8 @@ export default function LoanShow({
                                         >
                                             If a payment cannot be made, the
                                             installment enters a 3-day grace
-                                            period, after which a 0.5% daily late
-                                            penalty applies.
+                                            period, after which a 0.5% daily
+                                            late penalty applies.
                                         </NoticeBanner>
                                     )}
                                 </CardContent>
@@ -474,21 +482,15 @@ export default function LoanShow({
                                 <dl className="divide-y">
                                     <DetailRow
                                         label="Principal"
-                                        value={formatMoney(
-                                            loan.principalMinor,
-                                        )}
+                                        value={formatMoney(loan.principalMinor)}
                                     />
                                     <DetailRow
                                         label="Committed"
-                                        value={formatMoney(
-                                            loan.fundedMinor,
-                                        )}
+                                        value={formatMoney(loan.fundedMinor)}
                                     />
                                     <DetailRow
                                         label="Remaining"
-                                        value={formatMoney(
-                                            loan.remainingMinor,
-                                        )}
+                                        value={formatMoney(loan.remainingMinor)}
                                     />
                                     <DetailRow
                                         label="Interest rate"

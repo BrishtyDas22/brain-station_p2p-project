@@ -102,8 +102,8 @@ export default function WithdrawMoney({
                             Withdraw Money
                         </h1>
                         <p className="text-sm text-muted-foreground">
-                            Send money from your wallet to a bKash, Nagad or bank
-                            account.
+                            Send money from your wallet to a bKash, Nagad or
+                            bank account.
                         </p>
                     </div>
 
@@ -140,8 +140,9 @@ export default function WithdrawMoney({
                         <CardHeader>
                             <CardTitle>Amount</CardTitle>
                             <CardDescription>
-                                Enter the amount you want to withdraw. The maximum
-                                per payout is ৳{maxTaka.toLocaleString()}.
+                                Enter the amount you want to withdraw. The
+                                maximum per payout is ৳
+                                {maxTaka.toLocaleString()}.
                             </CardDescription>
                         </CardHeader>
                         <CardContent>
@@ -158,7 +159,10 @@ export default function WithdrawMoney({
                                         placeholder="5,000"
                                         value={data.amount}
                                         onChange={(event) =>
-                                            setData('amount', event.target.value)
+                                            setData(
+                                                'amount',
+                                                event.target.value,
+                                            )
                                         }
                                         className="pl-7"
                                         aria-invalid={Boolean(errors.amount)}
@@ -263,8 +267,8 @@ export default function WithdrawMoney({
                                             )}
                                         />
                                         <p className="text-xs text-muted-foreground">
-                                            We store only the last four digits. A
-                                            PIN or OTP is never collected.
+                                            We store only the last four digits.
+                                            A PIN or OTP is never collected.
                                         </p>
                                         {errors.mobile_number && (
                                             <p className="text-sm text-destructive">
@@ -277,9 +281,7 @@ export default function WithdrawMoney({
                                 {selected.inputKind === 'BANK' && (
                                     <div className="grid gap-4 sm:grid-cols-2">
                                         <div className="space-y-2">
-                                            <Label htmlFor="bank">
-                                                Bank
-                                            </Label>
+                                            <Label htmlFor="bank">Bank</Label>
                                             <Select
                                                 value={data.bank}
                                                 onValueChange={(value) =>

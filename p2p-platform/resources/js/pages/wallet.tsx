@@ -19,11 +19,7 @@ import {
     CardHeader,
     CardTitle,
 } from '@/components/ui/card';
-import {
-    DetailRow,
-    EmptyState,
-    StatTile,
-} from '@/p2p/components';
+import { DetailRow, EmptyState, StatTile } from '@/p2p/components';
 import { formatMoney } from '@/p2p/money';
 
 type WalletProps = {
@@ -69,16 +65,17 @@ export default function Wallet({
                             description={
                                 kycApproved ? (
                                     <>
-                                        Your identity is approved, so a wallet is being
-                                        provisioned for you now. If this message is
-                                        still here, refresh the page.
+                                        Your identity is approved, so a wallet
+                                        is being provisioned for you now. If
+                                        this message is still here, refresh the
+                                        page.
                                     </>
                                 ) : (
                                     <>
-                                        A wallet is created once your identity is
-                                        approved by an administrator. Until then there
-                                        is no ledger account, so there is no balance
-                                        to show.
+                                        A wallet is created once your identity
+                                        is approved by an administrator. Until
+                                        then there is no ledger account, so
+                                        there is no balance to show.
                                     </>
                                 )
                             }
@@ -106,8 +103,8 @@ export default function Wallet({
                             Wallet
                         </h1>
                         <p className="text-sm text-muted-foreground">
-                            Your balance is derived from the entries posted to your
-                            ledger account.
+                            Your balance is derived from the entries posted to
+                            your ledger account.
                         </p>
                     </div>
 
@@ -147,19 +144,30 @@ export default function Wallet({
                         <CardHeader>
                             <CardTitle>Wallet</CardTitle>
                             <CardDescription>
-                                The wallet record and its link to the ledger account.
+                                The wallet record and its link to the ledger
+                                account.
                             </CardDescription>
                         </CardHeader>
                         <CardContent>
                             <dl className="divide-y">
-                                <DetailRow label="Wallet name" value={wallet.name} />
-                                <DetailRow label="Wallet ID" value={`#${wallet.id}`} mono />
+                                <DetailRow
+                                    label="Wallet name"
+                                    value={wallet.name}
+                                />
+                                <DetailRow
+                                    label="Wallet ID"
+                                    value={`#${wallet.id}`}
+                                    mono
+                                />
                                 <DetailRow
                                     label="Ledger account"
                                     value={account ? `#${account.id}` : '—'}
                                     mono
                                 />
-                                <DetailRow label="Currency" value={wallet.currency} />
+                                <DetailRow
+                                    label="Currency"
+                                    value={wallet.currency}
+                                />
                                 <DetailRow
                                     label="Added so far"
                                     value={formatMoney(totals.added)}
@@ -191,8 +199,9 @@ export default function Wallet({
                         <CardHeader>
                             <CardTitle>Ledger account</CardTitle>
                             <CardDescription>
-                                The account owns the append-only ledger entries. It does
-                                not hold a balance column — the wallet does.
+                                The account owns the append-only ledger entries.
+                                It does not hold a balance column — the wallet
+                                does.
                             </CardDescription>
                         </CardHeader>
                         <CardContent>

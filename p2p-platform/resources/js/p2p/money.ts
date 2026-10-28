@@ -17,7 +17,10 @@ const POISHA_PER_TAKA = 100;
  * Integer division and remainder only — no binary floating-point value is
  * ever produced for the taka part.
  */
-export function formatMoney(minor: Minor, options?: { showSymbol?: boolean }): string {
+export function formatMoney(
+    minor: Minor,
+    options?: { showSymbol?: boolean },
+): string {
     const showSymbol = options?.showSymbol ?? true;
 
     const negative = minor < 0;
@@ -39,7 +42,10 @@ export function formatMoney(minor: Minor, options?: { showSymbol?: boolean }): s
 /**
  * Format a signed amount for a ledger-style debit/credit display.
  */
-export function formatSignedMoney(minor: Minor, direction: 'DEBIT' | 'CREDIT'): string {
+export function formatSignedMoney(
+    minor: Minor,
+    direction: 'DEBIT' | 'CREDIT',
+): string {
     const sign = direction === 'DEBIT' ? '−' : '+';
 
     return `${sign}${formatMoney(Math.abs(minor))}`;

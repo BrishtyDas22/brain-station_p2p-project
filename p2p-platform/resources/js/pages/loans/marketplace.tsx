@@ -27,7 +27,12 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { EmptyState, FundingMeter, LoanStatusBadge, NoticeBanner } from '@/p2p/components';
+import {
+    EmptyState,
+    FundingMeter,
+    LoanStatusBadge,
+    NoticeBanner,
+} from '@/p2p/components';
 import { formatMoney } from '@/p2p/money';
 import type { LoanStatus } from '@/p2p/types';
 
@@ -93,8 +98,8 @@ export default function LoanMarketplace({
                         </h1>
                         <p className="text-sm text-muted-foreground">
                             Borrow ৳{minTaka.toLocaleString()} – ৳
-                            {maxTaka.toLocaleString()} from other members, or fund a
-                            listing with your own wallet balance.
+                            {maxTaka.toLocaleString()} from other members, or
+                            fund a listing with your own wallet balance.
                         </p>
                     </div>
 
@@ -111,7 +116,9 @@ export default function LoanMarketplace({
                         {canRequest ? (
                             <Button
                                 type="button"
-                                onClick={() => setShowRequestForm((open) => !open)}
+                                onClick={() =>
+                                    setShowRequestForm((open) => !open)
+                                }
                             >
                                 <Plus className="size-4" />
                                 Request a loan
@@ -133,13 +140,16 @@ export default function LoanMarketplace({
                             <CardTitle>Request a loan</CardTitle>
                             <CardDescription>
                                 Your request is published on the marketplace
-                                immediately. Lenders commit from their own wallet
-                                balance, and you receive the principal only once the
-                                loan is 100% funded.
+                                immediately. Lenders commit from their own
+                                wallet balance, and you receive the principal
+                                only once the loan is 100% funded.
                             </CardDescription>
                         </CardHeader>
                         <CardContent>
-                            <form onSubmit={submitRequest} className="space-y-4">
+                            <form
+                                onSubmit={submitRequest}
+                                className="space-y-4"
+                            >
                                 <div className="grid gap-4 sm:grid-cols-3">
                                     <div className="space-y-2">
                                         <Label htmlFor="principal">
@@ -189,7 +199,9 @@ export default function LoanMarketplace({
                                                     (months) => (
                                                         <SelectItem
                                                             key={months}
-                                                            value={String(months)}
+                                                            value={String(
+                                                                months,
+                                                            )}
                                                         >
                                                             {months} month
                                                             {months === 1
@@ -215,7 +227,9 @@ export default function LoanMarketplace({
                                             id="interest_rate_bps"
                                             name="interest_rate_bps"
                                             inputMode="numeric"
-                                            value={request.data.interest_rate_bps}
+                                            value={
+                                                request.data.interest_rate_bps
+                                            }
                                             onChange={(event) =>
                                                 request.setData(
                                                     'interest_rate_bps',
@@ -223,7 +237,8 @@ export default function LoanMarketplace({
                                                 )
                                             }
                                             aria-invalid={Boolean(
-                                                request.errors.interest_rate_bps,
+                                                request.errors
+                                                    .interest_rate_bps,
                                             )}
                                         />
                                         <p className="text-xs text-muted-foreground">
@@ -293,9 +308,9 @@ export default function LoanMarketplace({
                 )}
 
                 <NoticeBanner tone="info">
-                    Funding a loan uses only your existing wallet balance — there is
-                    no external payment step. Your capital is locked in escrow until
-                    the loan is fully funded.
+                    Funding a loan uses only your existing wallet balance —
+                    there is no external payment step. Your capital is locked in
+                    escrow until the loan is fully funded.
                 </NoticeBanner>
 
                 {listings.length === 0 ? (

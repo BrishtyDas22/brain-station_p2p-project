@@ -1,12 +1,5 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
-import {
-    ArrowLeft,
-    CheckCircle2,
-    Landmark,
-    ShieldCheck,
-    Smartphone,
-    XCircle,
-} from 'lucide-react';
+import { ArrowLeft, Landmark, ShieldCheck, Smartphone } from 'lucide-react';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import {
@@ -191,10 +184,7 @@ export default function Withdrawal({
                                 />
                             )}
                             {details.bank && (
-                                <DetailRow
-                                    label="Bank"
-                                    value={details.bank}
-                                />
+                                <DetailRow label="Bank" value={details.bank} />
                             )}
                             {details.account_number && (
                                 <DetailRow

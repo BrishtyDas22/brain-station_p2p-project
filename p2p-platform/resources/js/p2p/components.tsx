@@ -6,13 +6,7 @@
  * an Inertia page; a component that writes posts through an Inertia form.
  */
 
-import {
-    AlertTriangle,
-    Ban,
-    Info,
-    Loader2,
-    ShieldCheck,
-} from 'lucide-react';
+import { AlertTriangle, Ban, Info, Loader2, ShieldCheck } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
@@ -97,18 +91,22 @@ export function StatTile({
 }) {
     const accents = {
         default: '',
-        primary:
-            'border-primary/20 bg-primary/[0.04] dark:bg-primary/[0.06]',
+        primary: 'border-primary/20 bg-primary/[0.04] dark:bg-primary/[0.06]',
         success:
             'border-emerald-500/25 bg-emerald-500/[0.05] dark:bg-emerald-500/[0.08]',
         warning:
             'border-amber-500/25 bg-amber-500/[0.05] dark:bg-amber-500/[0.08]',
-        danger:
-            'border-destructive/25 bg-destructive/[0.05] dark:bg-destructive/[0.08]',
+        danger: 'border-destructive/25 bg-destructive/[0.05] dark:bg-destructive/[0.08]',
     } as const;
 
     return (
-        <Card className={cn('gap-0 border py-5 shadow-sm', accents[accent], className)}>
+        <Card
+            className={cn(
+                'gap-0 border py-5 shadow-sm',
+                accents[accent],
+                className,
+            )}
+        >
             <CardContent className="px-5">
                 <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0 flex-1">
@@ -139,38 +137,39 @@ export function StatTile({
  * The colour mapping for a transaction status.
  */
 export function StatusBadge({ status }: { status: TransactionStatus }) {
-    const map: Record<TransactionStatus, { label: string; className: string }> = {
-        CHAIN_CLOSED: {
-            label: 'Settled',
-            className:
-                'border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300',
-        },
-        CHAIN_PENDING: {
-            label: 'Pending',
-            className:
-                'border-sky-500/30 bg-sky-500/10 text-sky-700 dark:text-sky-300',
-        },
-        POSTED: {
-            label: 'Posted',
-            className:
-                'border-sky-500/30 bg-sky-500/10 text-sky-700 dark:text-sky-300',
-        },
-        UNDER_REVIEW: {
-            label: 'Under review',
-            className:
-                'border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300',
-        },
-        REVERSED: {
-            label: 'Reversed',
-            className:
-                'border-violet-500/30 bg-violet-500/10 text-violet-700 dark:text-violet-300',
-        },
-        FAILED: {
-            label: 'Failed',
-            className:
-                'border-destructive/30 bg-destructive/10 text-destructive dark:text-red-400',
-        },
-    };
+    const map: Record<TransactionStatus, { label: string; className: string }> =
+        {
+            CHAIN_CLOSED: {
+                label: 'Settled',
+                className:
+                    'border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300',
+            },
+            CHAIN_PENDING: {
+                label: 'Pending',
+                className:
+                    'border-sky-500/30 bg-sky-500/10 text-sky-700 dark:text-sky-300',
+            },
+            POSTED: {
+                label: 'Posted',
+                className:
+                    'border-sky-500/30 bg-sky-500/10 text-sky-700 dark:text-sky-300',
+            },
+            UNDER_REVIEW: {
+                label: 'Under review',
+                className:
+                    'border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300',
+            },
+            REVERSED: {
+                label: 'Reversed',
+                className:
+                    'border-violet-500/30 bg-violet-500/10 text-violet-700 dark:text-violet-300',
+            },
+            FAILED: {
+                label: 'Failed',
+                className:
+                    'border-destructive/30 bg-destructive/10 text-destructive dark:text-red-400',
+            },
+        };
 
     const entry = map[status] ?? map.CHAIN_PENDING;
 
@@ -227,13 +226,15 @@ export function KycBadge({ status }: { status: KycStatus }) {
 export function RiskBadge({ level }: { level: RiskLevel }) {
     const map: Record<RiskLevel, string> = {
         LOW: 'border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300',
-        MEDIUM:
-            'border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300',
+        MEDIUM: 'border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300',
         HIGH: 'border-destructive/30 bg-destructive/10 text-destructive dark:text-red-400',
     };
 
     return (
-        <Badge variant="outline" className={cn('font-medium', map[level] ?? map.LOW)}>
+        <Badge
+            variant="outline"
+            className={cn('font-medium', map[level] ?? map.LOW)}
+        >
             {level.charAt(0) + level.slice(1).toLowerCase()}
         </Badge>
     );
@@ -327,7 +328,8 @@ export function Meter({
     total: number;
     hint?: string;
 }) {
-    const percent = total > 0 ? Math.min(100, Math.round((used / total) * 100)) : 0;
+    const percent =
+        total > 0 ? Math.min(100, Math.round((used / total) * 100)) : 0;
 
     return (
         <div className="space-y-2">
@@ -480,27 +482,28 @@ export function InstallmentStatusBadge({
 }: {
     status: InstallmentStatus;
 }) {
-    const map: Record<InstallmentStatus, { label: string; className: string }> = {
-        PENDING: {
-            label: 'Upcoming',
-            className: 'border-border bg-muted text-muted-foreground',
-        },
-        PAID: {
-            label: 'Paid',
-            className:
-                'border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300',
-        },
-        GRACE_PERIOD: {
-            label: 'Grace period',
-            className:
-                'border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300',
-        },
-        DEFAULTED: {
-            label: 'Defaulted',
-            className:
-                'border-destructive/30 bg-destructive/10 text-destructive dark:text-red-400',
-        },
-    };
+    const map: Record<InstallmentStatus, { label: string; className: string }> =
+        {
+            PENDING: {
+                label: 'Upcoming',
+                className: 'border-border bg-muted text-muted-foreground',
+            },
+            PAID: {
+                label: 'Paid',
+                className:
+                    'border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300',
+            },
+            GRACE_PERIOD: {
+                label: 'Grace period',
+                className:
+                    'border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300',
+            },
+            DEFAULTED: {
+                label: 'Defaulted',
+                className:
+                    'border-destructive/30 bg-destructive/10 text-destructive dark:text-red-400',
+            },
+        };
 
     const entry = map[status] ?? map.PENDING;
 
@@ -519,27 +522,28 @@ export function WithdrawalStatusBadge({
 }: {
     status: WithdrawalStatus;
 }) {
-    const map: Record<WithdrawalStatus, { label: string; className: string }> = {
-        PENDING: {
-            label: 'Awaiting confirmation',
-            className:
-                'border-sky-500/30 bg-sky-500/10 text-sky-700 dark:text-sky-300',
-        },
-        SUCCEEDED: {
-            label: 'Payment Successful',
-            className:
-                'border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300',
-        },
-        FAILED: {
-            label: 'Payment Failed',
-            className:
-                'border-destructive/30 bg-destructive/10 text-destructive dark:text-red-400',
-        },
-        CANCELLED: {
-            label: 'Payment Cancelled',
-            className: 'border-border bg-muted text-muted-foreground',
-        },
-    };
+    const map: Record<WithdrawalStatus, { label: string; className: string }> =
+        {
+            PENDING: {
+                label: 'Awaiting confirmation',
+                className:
+                    'border-sky-500/30 bg-sky-500/10 text-sky-700 dark:text-sky-300',
+            },
+            SUCCEEDED: {
+                label: 'Payment Successful',
+                className:
+                    'border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300',
+            },
+            FAILED: {
+                label: 'Payment Failed',
+                className:
+                    'border-destructive/30 bg-destructive/10 text-destructive dark:text-red-400',
+            },
+            CANCELLED: {
+                label: 'Payment Cancelled',
+                className: 'border-border bg-muted text-muted-foreground',
+            },
+        };
 
     const entry = map[status] ?? map.PENDING;
 

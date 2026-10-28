@@ -62,9 +62,9 @@ export default function AdminDashboard({
 
             <div className="space-y-6">
                 <NoticeBanner tone="info">
-                    Every figure below is computed live from the database. Settlement,
-                    reversal and dispute counts reflect recorded rows — no simulation is
-                    involved.
+                    Every figure below is computed live from the database.
+                    Settlement, reversal and dispute counts reflect recorded
+                    rows — no simulation is involved.
                 </NoticeBanner>
 
                 <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -174,7 +174,8 @@ export default function AdminDashboard({
                                 <div>
                                     <CardTitle>Recent audit trail</CardTitle>
                                     <CardDescription>
-                                        The last eight records in the append-only chain.
+                                        The last eight records in the
+                                        append-only chain.
                                     </CardDescription>
                                 </div>
                                 <Button asChild variant="outline" size="sm">
@@ -211,7 +212,8 @@ export default function AdminDashboard({
                                             <div className="shrink-0 text-right">
                                                 <p
                                                     className={
-                                                        record.result === 'DENIED'
+                                                        record.result ===
+                                                        'DENIED'
                                                             ? 'text-xs font-medium text-destructive'
                                                             : 'text-xs font-medium text-emerald-600 dark:text-emerald-400'
                                                     }
@@ -239,13 +241,15 @@ export default function AdminDashboard({
                             </CardTitle>
                             <CardDescription>
                                 {stats.underReview} transaction
-                                {stats.underReview === 1 ? ' is' : 's are'} flagged for
-                                review.
+                                {stats.underReview === 1 ? ' is' : 's are'}{' '}
+                                flagged for review.
                             </CardDescription>
                         </CardHeader>
                         <CardContent>
                             <Button asChild variant="outline" size="sm">
-                                <Link href="/admin/monitoring">Open monitoring</Link>
+                                <Link href="/admin/monitoring">
+                                    Open monitoring
+                                </Link>
                             </Button>
                         </CardContent>
                     </Card>

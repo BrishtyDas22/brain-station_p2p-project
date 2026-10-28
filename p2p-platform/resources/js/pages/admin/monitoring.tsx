@@ -17,8 +17,17 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import { DataTable, DirectionAmount, RiskBadge, StatusBadge } from '@/p2p/components';
-import type { LedgerDirection, RiskLevel, TransactionStatus } from '@/p2p/types';
+import {
+    DataTable,
+    DirectionAmount,
+    RiskBadge,
+    StatusBadge,
+} from '@/p2p/components';
+import type {
+    LedgerDirection,
+    RiskLevel,
+    TransactionStatus,
+} from '@/p2p/types';
 
 type MonitoringRow = {
     id: number;
@@ -93,7 +102,9 @@ export default function AdminMonitoring({
                                 <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
                                 <Input
                                     value={search}
-                                    onChange={(event) => setSearch(event.target.value)}
+                                    onChange={(event) =>
+                                        setSearch(event.target.value)
+                                    }
                                     placeholder="Search by reference or counterparty…"
                                     className="pl-9"
                                     aria-label="Search transactions"
@@ -115,11 +126,16 @@ export default function AdminMonitoring({
                                     );
                                 }}
                             >
-                                <SelectTrigger className="w-[170px]" aria-label="Status">
+                                <SelectTrigger
+                                    className="w-[170px]"
+                                    aria-label="Status"
+                                >
                                     <SelectValue placeholder="All statuses" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="ALL">All statuses</SelectItem>
+                                    <SelectItem value="ALL">
+                                        All statuses
+                                    </SelectItem>
                                     {statuses.map((option) => (
                                         <SelectItem key={option} value={option}>
                                             {option.replace(/_/g, ' ')}
@@ -138,7 +154,8 @@ export default function AdminMonitoring({
                         <CardTitle>Transaction log</CardTitle>
                         <CardDescription>
                             {transactions.total} transfer
-                            {transactions.total === 1 ? '' : 's'} across all accounts.
+                            {transactions.total === 1 ? '' : 's'} across all
+                            accounts.
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
@@ -159,7 +176,10 @@ export default function AdminMonitoring({
                                 ]}
                             >
                                 {rows.map((row) => (
-                                    <tr key={row.id} className="hover:bg-muted/30">
+                                    <tr
+                                        key={row.id}
+                                        className="hover:bg-muted/30"
+                                    >
                                         <td className="px-4 py-3">
                                             <Link
                                                 href={`/transactions/${row.id}`}
@@ -168,7 +188,9 @@ export default function AdminMonitoring({
                                                 {row.reference}
                                             </Link>
                                         </td>
-                                        <td className="px-4 py-3">{row.accountHolder}</td>
+                                        <td className="px-4 py-3">
+                                            {row.accountHolder}
+                                        </td>
                                         <td className="px-4 py-3">
                                             {row.counterpartyName || '—'}
                                         </td>

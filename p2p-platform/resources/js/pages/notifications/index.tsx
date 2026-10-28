@@ -31,7 +31,10 @@ const TONE_STYLES: Record<Notification['tone'], string> = {
     danger: 'bg-destructive',
 };
 
-export default function Notifications({ notifications, availability }: NotificationsProps) {
+export default function Notifications({
+    notifications,
+    availability,
+}: NotificationsProps) {
     return (
         <>
             <Head title="Notifications" />

@@ -93,7 +93,9 @@ export default function Funding({
 
     return (
         <>
-            <Head title={succeeded ? 'Payment Successful' : 'Complete payment'} />
+            <Head
+                title={succeeded ? 'Payment Successful' : 'Complete payment'}
+            />
 
             <div className="mx-auto max-w-2xl space-y-6">
                 <div>
@@ -182,8 +184,7 @@ export default function Funding({
                                             <CheckCircle2 className="size-3.5" />
                                         )}
                                         {(funding.status === 'FAILED' ||
-                                            funding.status ===
-                                                'CANCELLED') && (
+                                            funding.status === 'CANCELLED') && (
                                             <XCircle className="size-3.5" />
                                         )}
                                         {funding.statusLabel}
@@ -214,10 +215,7 @@ export default function Funding({
                                 />
                             )}
                             {details.bank && (
-                                <DetailRow
-                                    label="Bank"
-                                    value={details.bank}
-                                />
+                                <DetailRow label="Bank" value={details.bank} />
                             )}
                             {details.account_number && (
                                 <DetailRow
@@ -249,8 +247,8 @@ export default function Funding({
                         <CardHeader>
                             <CardTitle>Confirm the payment</CardTitle>
                             <CardDescription>
-                                The gateway confirms the outcome. You can also cancel
-                                at this step.
+                                The gateway confirms the outcome. You can also
+                                cancel at this step.
                             </CardDescription>
                         </CardHeader>
                         <CardContent className="flex flex-wrap gap-2">

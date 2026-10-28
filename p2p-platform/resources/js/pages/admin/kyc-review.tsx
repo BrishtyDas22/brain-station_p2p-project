@@ -10,7 +10,6 @@ import {
     CardTitle,
 } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import {
     Select,
     SelectContent,
@@ -77,9 +76,10 @@ export default function AdminKycReview({
                                 </CardTitle>
                                 <CardDescription>
                                     {submissions.total} application
-                                    {submissions.total === 1 ? '' : 's'} on file. Every
-                                    decision is validated server-side against the KYC
-                                    state machine and written to the audit chain.
+                                    {submissions.total === 1 ? '' : 's'} on
+                                    file. Every decision is validated
+                                    server-side against the KYC state machine
+                                    and written to the audit chain.
                                 </CardDescription>
                             </div>
 
@@ -98,11 +98,16 @@ export default function AdminKycReview({
                                     );
                                 }}
                             >
-                                <SelectTrigger className="w-[170px]" aria-label="Status">
+                                <SelectTrigger
+                                    className="w-[170px]"
+                                    aria-label="Status"
+                                >
                                     <SelectValue placeholder="All statuses" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="ALL">All statuses</SelectItem>
+                                    <SelectItem value="ALL">
+                                        All statuses
+                                    </SelectItem>
                                     {statuses.map((option) => (
                                         <SelectItem key={option} value={option}>
                                             {option.replace(/_/g, ' ')}
@@ -129,7 +134,10 @@ export default function AdminKycReview({
                                 ]}
                             >
                                 {rows.map((row) => (
-                                    <tr key={row.id} className="align-top hover:bg-muted/30">
+                                    <tr
+                                        key={row.id}
+                                        className="align-top hover:bg-muted/30"
+                                    >
                                         <td className="px-4 py-3">
                                             <p className="font-medium">
                                                 {row.applicantName}
@@ -142,7 +150,9 @@ export default function AdminKycReview({
                                             </p>
                                         </td>
                                         <td className="px-4 py-3">
-                                            <p className="text-sm">{row.documentType}</p>
+                                            <p className="text-sm">
+                                                {row.documentType}
+                                            </p>
                                             <p className="font-mono text-xs text-muted-foreground">
                                                 {row.nationalIdMasked}
                                             </p>
@@ -170,7 +180,9 @@ export default function AdminKycReview({
                                             )}
                                         </td>
                                         <td className="px-4 py-3">
-                                            <DecisionControls submission={row} />
+                                            <DecisionControls
+                                                submission={row}
+                                            />
                                         </td>
                                     </tr>
                                 ))}
@@ -239,9 +251,12 @@ function DecisionControls({ submission }: { submission: SubmissionRow }) {
                     size="sm"
                     disabled={approveForm.processing}
                     onClick={() =>
-                        approveForm.post(`/admin/kyc/${submission.id}/approve`, {
-                            preserveScroll: true,
-                        })
+                        approveForm.post(
+                            `/admin/kyc/${submission.id}/approve`,
+                            {
+                                preserveScroll: true,
+                            },
+                        )
                     }
                 >
                     <CheckCircle2 className="size-3.5" />
@@ -262,7 +277,10 @@ function DecisionControls({ submission }: { submission: SubmissionRow }) {
                     aria-label={`Rejection reason for ${submission.applicantName}`}
                     value={rejectForm.data.rejection_reason}
                     onChange={(event) =>
-                        rejectForm.setData('rejection_reason', event.target.value)
+                        rejectForm.setData(
+                            'rejection_reason',
+                            event.target.value,
+                        )
                     }
                 />
                 <Button

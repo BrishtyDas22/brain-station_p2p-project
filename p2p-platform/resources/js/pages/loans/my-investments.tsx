@@ -45,9 +45,7 @@ export default function MyInvestments({
 
     const disbursed = investments
         .filter((investment) =>
-            ['DISBURSED', 'REPAYING', 'REPAID'].includes(
-                investment.loanStatus,
-            ),
+            ['DISBURSED', 'REPAYING', 'REPAID'].includes(investment.loanStatus),
         )
         .reduce((sum, investment) => sum + investment.amountMinor, 0);
 
@@ -148,7 +146,7 @@ export default function MyInvestments({
                                                 investment.amountMinor,
                                             )}
                                         </td>
-                                        <td className="px-4 py-3 tabular-nums text-muted-foreground">
+                                        <td className="px-4 py-3 text-muted-foreground tabular-nums">
                                             {investment.loanPrincipalMinor > 0
                                                 ? `${Math.round(
                                                       (investment.amountMinor /
@@ -159,9 +157,7 @@ export default function MyInvestments({
                                         </td>
                                         <td className="px-4 py-3">
                                             <LoanStatusBadge
-                                                status={
-                                                    investment.loanStatus
-                                                }
+                                                status={investment.loanStatus}
                                             />
                                         </td>
                                         <td className="px-4 py-3 text-muted-foreground">

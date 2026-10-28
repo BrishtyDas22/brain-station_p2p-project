@@ -23,11 +23,12 @@ type ReportsProps = {
     availability: { enabled: boolean; reason: string };
 };
 
-export default function Reports({ totals, byStatus, availability }: ReportsProps) {
-    const maxCount = byStatus.reduce(
-        (max, row) => Math.max(max, row.count),
-        0,
-    );
+export default function Reports({
+    totals,
+    byStatus,
+    availability,
+}: ReportsProps) {
+    const maxCount = byStatus.reduce((max, row) => Math.max(max, row.count), 0);
 
     return (
         <>
@@ -83,14 +84,19 @@ export default function Reports({ totals, byStatus, availability }: ReportsProps
                                 {/* Simple CSS bar chart — no charting dependency. */}
                                 <div className="space-y-3">
                                     {byStatus.map((row) => (
-                                        <div key={row.status} className="space-y-1.5">
+                                        <div
+                                            key={row.status}
+                                            className="space-y-1.5"
+                                        >
                                             <div className="flex items-baseline justify-between gap-3 text-sm">
                                                 <span className="font-medium">
                                                     {row.label}
                                                 </span>
                                                 <span className="text-muted-foreground tabular-nums">
                                                     {row.count} ·{' '}
-                                                    {formatMoney(row.volumeMinor)}
+                                                    {formatMoney(
+                                                        row.volumeMinor,
+                                                    )}
                                                 </span>
                                             </div>
                                             <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
@@ -100,7 +106,8 @@ export default function Reports({ totals, byStatus, availability }: ReportsProps
                                                         width: `${
                                                             maxCount > 0
                                                                 ? Math.round(
-                                                                      (row.count / maxCount) *
+                                                                      (row.count /
+                                                                          maxCount) *
                                                                           100,
                                                                   )
                                                                 : 0
@@ -116,9 +123,14 @@ export default function Reports({ totals, byStatus, availability }: ReportsProps
                                     headers={['Status', 'Count', 'Volume']}
                                 >
                                     {byStatus.map((row) => (
-                                        <tr key={row.status} className="hover:bg-muted/30">
+                                        <tr
+                                            key={row.status}
+                                            className="hover:bg-muted/30"
+                                        >
                                             <td className="px-4 py-3">
-                                                <Badge variant="outline">{row.label}</Badge>
+                                                <Badge variant="outline">
+                                                    {row.label}
+                                                </Badge>
                                             </td>
                                             <td className="px-4 py-3 tabular-nums">
                                                 {row.count}

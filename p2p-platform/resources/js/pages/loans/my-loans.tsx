@@ -9,7 +9,6 @@ import {
     CardTitle,
 } from '@/components/ui/card';
 import {
-    DataTable,
     EmptyState,
     FundingMeter,
     LoanStatusBadge,
@@ -55,9 +54,7 @@ type MyLoansProps = {
 
 export default function MyLoans({ loans, canRequest, limits }: MyLoansProps) {
     const totalBorrowed = loans
-        .filter((loan) =>
-            ['DISBURSED', 'REPAYING'].includes(loan.status),
-        )
+        .filter((loan) => ['DISBURSED', 'REPAYING'].includes(loan.status))
         .reduce((sum, loan) => sum + loan.principalMinor, 0);
 
     const awaitingFunding = loans.filter(
@@ -138,9 +135,13 @@ export default function MyLoans({ loans, canRequest, limits }: MyLoansProps) {
                             description={
                                 canRequest
                                     ? 'Request a loan of ৳' +
-                                      (limits.minPrincipalMinor / 100).toLocaleString() +
+                                      (
+                                          limits.minPrincipalMinor / 100
+                                      ).toLocaleString() +
                                       ' – ৳' +
-                                      (limits.maxPrincipalMinor / 100).toLocaleString() +
+                                      (
+                                          limits.maxPrincipalMinor / 100
+                                      ).toLocaleString() +
                                       ' and it will be published on the marketplace.'
                                     : 'Complete your KYC verification to request a loan.'
                             }
@@ -164,7 +165,9 @@ export default function MyLoans({ loans, canRequest, limits }: MyLoansProps) {
                                     <div className="flex flex-wrap items-start justify-between gap-3">
                                         <div className="min-w-0">
                                             <CardTitle>
-                                                {formatMoney(loan.principalMinor)}
+                                                {formatMoney(
+                                                    loan.principalMinor,
+                                                )}
                                             </CardTitle>
                                             <CardDescription className="mt-1">
                                                 {loan.reference} ·{' '}
@@ -175,9 +178,7 @@ export default function MyLoans({ loans, canRequest, limits }: MyLoansProps) {
                                                 at {loan.interestRateLabel}
                                             </CardDescription>
                                         </div>
-                                        <LoanStatusBadge
-                                            status={loan.status}
-                                        />
+                                        <LoanStatusBadge status={loan.status} />
                                     </div>
                                 </CardHeader>
                                 <CardContent className="space-y-4">
@@ -199,7 +200,11 @@ export default function MyLoans({ loans, canRequest, limits }: MyLoansProps) {
                                             · listed {loan.createdAt}
                                         </span>
 
-                                        <Button asChild size="sm" variant="outline">
+                                        <Button
+                                            asChild
+                                            size="sm"
+                                            variant="outline"
+                                        >
                                             <Link href={`/loans/${loan.id}`}>
                                                 View loan
                                                 <ArrowRight className="size-4" />

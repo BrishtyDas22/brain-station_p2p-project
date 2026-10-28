@@ -1,0 +1,38 @@
+version: 2
+updates:
+  # GitHub Actions used by the CI workflow in this repository.
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    cooldown:
+      default-days: 5
+    groups:
+      github-actions:
+        patterns:
+          - "*"
+
+  # Composer dependencies. The Laravel application lives in the `p2p-platform`
+  # subdirectory, so the manifest path is relative to the repository root.
+  - package-ecosystem: "composer"
+    directory: "/p2p-platform"
+    schedule:
+      interval: "weekly"
+    cooldown:
+      default-days: 5
+    groups:
+      composer-dependencies:
+        patterns:
+          - "*"
+
+  # npm dependencies, driven by the committed `package-lock.json`.
+  - package-ecosystem: "npm"
+    directory: "/p2p-platform"
+    schedule:
+      interval: "weekly"
+    cooldown:
+      default-days: 5
+    groups:
+      npm-dependencies:
+        patterns:
+          - "*"

@@ -63,27 +63,127 @@ type P2PNavItem = {
  * remains the authority.
  */
 export const p2pNavItems: readonly P2PNavItem[] = [
-    { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, section: 'personal' },
+    {
+        label: 'Dashboard',
+        href: '/dashboard',
+        icon: LayoutDashboard,
+        section: 'personal',
+    },
     { label: 'Wallet', href: '/wallet', icon: Wallet, section: 'personal' },
-    { label: 'Add Money', href: '/wallet/fundings', icon: Plus, section: 'personal' },
-    { label: 'Withdraw Money', href: '/wallet/withdrawals', icon: Landmark, section: 'personal' },
-    { label: 'Loan Marketplace', href: '/loans', icon: HandCoins, section: 'personal' },
-    { label: 'My Loans', href: '/loans/my', icon: FileSearch, section: 'personal' },
-    { label: 'My Investments', href: '/loans/investments', icon: Users, section: 'personal' },
-    { label: 'Receive Money', href: '/receive', icon: RefreshCcw, section: 'personal' },
-    { label: 'Transactions', href: '/transactions', icon: Activity, section: 'personal' },
-    { label: 'KYC Verification', href: '/kyc', icon: ShieldCheck, section: 'personal' },
-    { label: 'Notifications', href: '/notifications', icon: Bell, section: 'personal' },
-    { label: 'Profile', href: '/settings/profile', icon: CircleUser, section: 'personal' },
-    { label: 'Security', href: '/settings/security', icon: FileSearch, section: 'personal' },
-    { label: 'Admin Overview', href: '/admin', icon: Building2, section: 'admin' },
-    { label: 'User Management', href: '/admin/users', icon: Users, section: 'admin' },
-    { label: 'KYC Review', href: '/admin/kyc', icon: FileSearch, section: 'admin' },
-    { label: 'Monitoring', href: '/admin/monitoring', icon: Activity, section: 'admin' },
-    { label: 'Settlement', href: '/admin/settlement', icon: RefreshCcw, section: 'admin' },
-    { label: 'Reversals & Disputes', href: '/admin/reversals', icon: Gavel, section: 'admin' },
-    { label: 'Ledger & Audit', href: '/admin/audit', icon: FileSearch, section: 'admin' },
-    { label: 'Reconciliation', href: '/admin/reconciliation', icon: RefreshCcw, section: 'admin' },
+    {
+        label: 'Add Money',
+        href: '/wallet/fundings',
+        icon: Plus,
+        section: 'personal',
+    },
+    {
+        label: 'Withdraw Money',
+        href: '/wallet/withdrawals',
+        icon: Landmark,
+        section: 'personal',
+    },
+    {
+        label: 'Loan Marketplace',
+        href: '/loans',
+        icon: HandCoins,
+        section: 'personal',
+    },
+    {
+        label: 'My Loans',
+        href: '/loans/my',
+        icon: FileSearch,
+        section: 'personal',
+    },
+    {
+        label: 'My Investments',
+        href: '/loans/investments',
+        icon: Users,
+        section: 'personal',
+    },
+    {
+        label: 'Receive Money',
+        href: '/receive',
+        icon: RefreshCcw,
+        section: 'personal',
+    },
+    {
+        label: 'Transactions',
+        href: '/transactions',
+        icon: Activity,
+        section: 'personal',
+    },
+    {
+        label: 'KYC Verification',
+        href: '/kyc',
+        icon: ShieldCheck,
+        section: 'personal',
+    },
+    {
+        label: 'Notifications',
+        href: '/notifications',
+        icon: Bell,
+        section: 'personal',
+    },
+    {
+        label: 'Profile',
+        href: '/settings/profile',
+        icon: CircleUser,
+        section: 'personal',
+    },
+    {
+        label: 'Security',
+        href: '/settings/security',
+        icon: FileSearch,
+        section: 'personal',
+    },
+    {
+        label: 'Admin Overview',
+        href: '/admin',
+        icon: Building2,
+        section: 'admin',
+    },
+    {
+        label: 'User Management',
+        href: '/admin/users',
+        icon: Users,
+        section: 'admin',
+    },
+    {
+        label: 'KYC Review',
+        href: '/admin/kyc',
+        icon: FileSearch,
+        section: 'admin',
+    },
+    {
+        label: 'Monitoring',
+        href: '/admin/monitoring',
+        icon: Activity,
+        section: 'admin',
+    },
+    {
+        label: 'Settlement',
+        href: '/admin/settlement',
+        icon: RefreshCcw,
+        section: 'admin',
+    },
+    {
+        label: 'Reversals & Disputes',
+        href: '/admin/reversals',
+        icon: Gavel,
+        section: 'admin',
+    },
+    {
+        label: 'Ledger & Audit',
+        href: '/admin/audit',
+        icon: FileSearch,
+        section: 'admin',
+    },
+    {
+        label: 'Reconciliation',
+        href: '/admin/reconciliation',
+        icon: RefreshCcw,
+        section: 'admin',
+    },
 ];
 
 function P2PSidebarNav({
@@ -183,7 +283,9 @@ function ThemeToggle() {
             size="icon"
             aria-label="Toggle theme"
             onClick={() =>
-                updateAppearance(resolvedAppearance === 'dark' ? 'light' : 'dark')
+                updateAppearance(
+                    resolvedAppearance === 'dark' ? 'light' : 'dark',
+                )
             }
         >
             {resolvedAppearance === 'dark' ? (
@@ -284,7 +386,9 @@ export default function P2PLayout({
                     </Sheet>
 
                     <div className="hidden min-w-0 flex-1 items-center gap-2 lg:flex">
-                        <h1 className="truncate text-sm font-semibold">{title}</h1>
+                        <h1 className="truncate text-sm font-semibold">
+                            {title}
+                        </h1>
                         {description && (
                             <span className="truncate text-xs text-muted-foreground">
                                 — {description}
@@ -345,7 +449,11 @@ export default function P2PLayout({
                                 </DropdownMenuItem>
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem asChild>
-                                    <Link href="/logout" method="post" as="button">
+                                    <Link
+                                        href="/logout"
+                                        method="post"
+                                        as="button"
+                                    >
                                         <LogOut className="size-4" />
                                         Log out
                                     </Link>

@@ -1,7 +1,6 @@
 import { Head, Link, useForm } from '@inertiajs/react';
 import {
     ArrowLeft,
-    Building2,
     CreditCard,
     Landmark,
     Smartphone,
@@ -108,8 +107,8 @@ export default function AddMoney({
                             Add Money
                         </h1>
                         <p className="text-sm text-muted-foreground">
-                            Top up your wallet with bKash, Nagad, a bank transfer or a
-                            card.
+                            Top up your wallet with bKash, Nagad, a bank
+                            transfer or a card.
                         </p>
                     </div>
 
@@ -135,8 +134,8 @@ export default function AddMoney({
                         <CardHeader>
                             <CardTitle>Amount</CardTitle>
                             <CardDescription>
-                                Enter the amount you want to add. The maximum per
-                                payment is ৳{maxTaka.toLocaleString()}.
+                                Enter the amount you want to add. The maximum
+                                per payment is ৳{maxTaka.toLocaleString()}.
                             </CardDescription>
                         </CardHeader>
                         <CardContent>
@@ -153,7 +152,10 @@ export default function AddMoney({
                                         placeholder="5,000"
                                         value={data.amount}
                                         onChange={(event) =>
-                                            setData('amount', event.target.value)
+                                            setData(
+                                                'amount',
+                                                event.target.value,
+                                            )
                                         }
                                         className="pl-7"
                                         aria-invalid={Boolean(errors.amount)}
@@ -180,7 +182,8 @@ export default function AddMoney({
                             <div className="grid gap-3 sm:grid-cols-2">
                                 {methods.map((option) => {
                                     const Icon =
-                                        METHOD_ICONS[option.value] ?? WalletIcon;
+                                        METHOD_ICONS[option.value] ??
+                                        WalletIcon;
                                     const active = option.value === method;
 
                                     return (
@@ -230,9 +233,7 @@ export default function AddMoney({
                     {selected && (
                         <Card>
                             <CardHeader>
-                                <CardTitle>
-                                    {selected.label} details
-                                </CardTitle>
+                                <CardTitle>{selected.label} details</CardTitle>
                                 <CardDescription>
                                     {selected.description}
                                 </CardDescription>
@@ -271,9 +272,7 @@ export default function AddMoney({
                                 {selected.inputKind === 'BANK' && (
                                     <div className="grid gap-4 sm:grid-cols-2">
                                         <div className="space-y-2">
-                                            <Label htmlFor="bank">
-                                                Bank
-                                            </Label>
+                                            <Label htmlFor="bank">Bank</Label>
                                             <Select
                                                 value={data.bank}
                                                 onValueChange={(value) =>

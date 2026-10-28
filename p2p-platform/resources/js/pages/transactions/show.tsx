@@ -15,7 +15,11 @@ import {
     StatusBadge,
 } from '@/p2p/components';
 import { formatMoney } from '@/p2p/money';
-import type { LedgerDirection, RiskLevel, TransactionStatus } from '@/p2p/types';
+import type {
+    LedgerDirection,
+    RiskLevel,
+    TransactionStatus,
+} from '@/p2p/types';
 
 type TransactionProps = {
     transaction: {
@@ -63,7 +67,8 @@ export default function TransactionShow({ transaction }: TransactionProps) {
                                 {t.kindLabel} details
                             </CardTitle>
                             <CardDescription>
-                                Reference <span className="font-mono">{t.reference}</span>
+                                Reference{' '}
+                                <span className="font-mono">{t.reference}</span>
                             </CardDescription>
                         </CardHeader>
                         <CardContent>
@@ -84,12 +89,21 @@ export default function TransactionShow({ transaction }: TransactionProps) {
                                 />
                                 <DetailRow
                                     label="Total"
-                                    value={formatMoney(t.amountMinor + t.feeMinor)}
+                                    value={formatMoney(
+                                        t.amountMinor + t.feeMinor,
+                                    )}
                                 />
-                                <DetailRow label="Currency" value={t.currency} />
+                                <DetailRow
+                                    label="Currency"
+                                    value={t.currency}
+                                />
                                 <DetailRow
                                     label="Direction"
-                                    value={t.direction === 'CREDIT' ? 'Received' : 'Sent'}
+                                    value={
+                                        t.direction === 'CREDIT'
+                                            ? 'Received'
+                                            : 'Sent'
+                                    }
                                 />
                                 <DetailRow
                                     label="Counterparty"
@@ -100,7 +114,10 @@ export default function TransactionShow({ transaction }: TransactionProps) {
                                     value={t.counterpartyAccount || '—'}
                                     mono
                                 />
-                                <DetailRow label="Method" value={t.method || '—'} />
+                                <DetailRow
+                                    label="Method"
+                                    value={t.method || '—'}
+                                />
                                 <DetailRow label="Note" value={t.note || '—'} />
                                 <DetailRow
                                     label="Created"
@@ -124,8 +141,8 @@ export default function TransactionShow({ transaction }: TransactionProps) {
                             <CardHeader>
                                 <CardTitle>Status</CardTitle>
                                 <CardDescription>
-                                    The ledger is the authority. This status is the
-                                    projection maintained alongside it.
+                                    The ledger is the authority. This status is
+                                    the projection maintained alongside it.
                                 </CardDescription>
                             </CardHeader>
                             <CardContent className="space-y-4">
@@ -148,8 +165,9 @@ export default function TransactionShow({ transaction }: TransactionProps) {
                                         Not settled
                                     </CardTitle>
                                     <CardDescription>
-                                        This transfer has not been closed on the chain.
-                                        It must not be treated as settled money.
+                                        This transfer has not been closed on the
+                                        chain. It must not be treated as settled
+                                        money.
                                     </CardDescription>
                                 </CardHeader>
                             </Card>

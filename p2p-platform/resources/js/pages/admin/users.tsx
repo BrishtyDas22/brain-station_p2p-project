@@ -46,7 +46,12 @@ type UsersProps = {
     totals: { users: number; admins: number };
 };
 
-export default function AdminUsers({ users, filters, roles, totals }: UsersProps) {
+export default function AdminUsers({
+    users,
+    filters,
+    roles,
+    totals,
+}: UsersProps) {
     const [search, setSearch] = useState(filters.search);
     const [role, setRole] = useState(filters.role);
 
@@ -72,10 +77,11 @@ export default function AdminUsers({ users, filters, roles, totals }: UsersProps
                             User directory
                         </CardTitle>
                         <CardDescription>
-                            {totals.users} registered user{totals.users === 1 ? '' : 's'},{' '}
-                            {totals.admins} with the administrator role. Only an
-                            administrator can see this page, and only an
-                            administrator can change a role.
+                            {totals.users} registered user
+                            {totals.users === 1 ? '' : 's'}, {totals.admins}{' '}
+                            with the administrator role. Only an administrator
+                            can see this page, and only an administrator can
+                            change a role.
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
@@ -90,7 +96,9 @@ export default function AdminUsers({ users, filters, roles, totals }: UsersProps
                                 <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
                                 <Input
                                     value={search}
-                                    onChange={(event) => setSearch(event.target.value)}
+                                    onChange={(event) =>
+                                        setSearch(event.target.value)
+                                    }
                                     placeholder="Search by name or email…"
                                     className="pl-9"
                                     aria-label="Search users"
@@ -112,11 +120,16 @@ export default function AdminUsers({ users, filters, roles, totals }: UsersProps
                                     );
                                 }}
                             >
-                                <SelectTrigger className="w-[160px]" aria-label="Role">
+                                <SelectTrigger
+                                    className="w-[160px]"
+                                    aria-label="Role"
+                                >
                                     <SelectValue placeholder="All roles" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="ALL">All roles</SelectItem>
+                                    <SelectItem value="ALL">
+                                        All roles
+                                    </SelectItem>
                                     {roles.map((option) => (
                                         <SelectItem key={option} value={option}>
                                             {option}
@@ -134,8 +147,9 @@ export default function AdminUsers({ users, filters, roles, totals }: UsersProps
                     <CardHeader>
                         <CardTitle>Accounts</CardTitle>
                         <CardDescription>
-                            Change a role by picking it from the row menu. The change is
-                            written to the database and recorded in the audit chain.
+                            Change a role by picking it from the row menu. The
+                            change is written to the database and recorded in
+                            the audit chain.
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
@@ -155,15 +169,22 @@ export default function AdminUsers({ users, filters, roles, totals }: UsersProps
                                 ]}
                             >
                                 {rows.map((row) => (
-                                    <tr key={row.id} className="hover:bg-muted/30">
+                                    <tr
+                                        key={row.id}
+                                        className="hover:bg-muted/30"
+                                    >
                                         <td className="px-4 py-3">
-                                            <p className="font-medium">{row.name}</p>
+                                            <p className="font-medium">
+                                                {row.name}
+                                            </p>
                                             <p className="text-xs text-muted-foreground">
                                                 {row.email}
                                             </p>
                                         </td>
                                         <td className="px-4 py-3">
-                                            <span className="text-sm">{row.roleLabel}</span>
+                                            <span className="text-sm">
+                                                {row.roleLabel}
+                                            </span>
                                         </td>
                                         <td className="px-4 py-3">
                                             <KycBadge status={row.kycStatus} />
@@ -224,7 +245,9 @@ function RoleControl({ user }: { user: UserRow }) {
             </Select>
 
             {form.errors.role && (
-                <span className="text-xs text-destructive">{form.errors.role}</span>
+                <span className="text-xs text-destructive">
+                    {form.errors.role}
+                </span>
             )}
 
             {form.processing && (

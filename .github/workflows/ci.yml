@@ -1,0 +1,329 @@
+name: CI
+
+# The Laravel application lives in the `p2p-platform/` subdirectory of this
+# repository, so every job runs its commands from there. Action *input paths*
+# that point at project files (caching, dependency lookups) are configured
+# separately, because an action resolves its paths from the repository root
+# while a `run:` step resolves them from the working directory.
+
+on:
+  push:
+    branches:
+      - setup/laravel-react
+      - main
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Cancel superseded runs on the same branch. The database service is
+# disposable, so an in-progress run can be stopped safely.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ci:
+    name: PHP checks, tests, and frontend build
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: p2p-platform
+
+    # ---------------------------------------------------------------------
+    # Isolated MySQL 8.0 test service.
+    #
+    # This is a CI-only, disposable instance. The credentials below are
+    # ephemeral values that exist only for the lifetime of the job. They are
+    # NOT the local development credentials, and nothing here reads the local
+    # secret file (`P2PTEST_DB_PASSWORD_FILE`) on the developer's machine.
+    #
+    # Port 3307 is deliberate: `tests/Feature/TestingDatabaseConfigurationTest`
+    # asserts that the test connection resolves to port 3307, so the service is
+    # published on that port to keep that existing assertion valid. The
+    # mapping is host:container, so the container listens on its own default
+    # 3306 internally while the runner reaches it on 3307. Host port 3306 is
+    # deliberately left unused by this project.
+    #
+    # The `options` value supplies the options used to create and health-check
+    # the Docker container that runs the MySQL service. It carries only the
+    # health-check settings used to gate the job on service readiness; it
+    # deliberately sets no MySQL server variables.
+    #
+    # The setting that allows the ledger migrations to install their
+    # mandatory append-only TRIGGERS on a server with binary logging enabled
+    # (`log_bin_trust_function_creators`) is applied at runtime by the
+    # "Enable MySQL trigger capability" step, over an authenticated admin
+    # connection, before the test suite runs. Without it MySQL refuses with
+    # error 1419 and the migrations abort (they are fail-closed by design), so
+    # the financial-integrity triggers are genuinely enforced in CI rather
+    # than being bypassed.
+    #
+    # NOTE: no `volumes:` mount is used here. GitHub Actions starts service
+    # containers BEFORE `actions/checkout` runs, so a bind mount whose source
+    # is a file inside the repository would point at a path that does not yet
+    # exist on the runner and the container would start with a broken/empty
+    # config. Applying the setting over a network connection at runtime
+    # avoids depending on any repository file being present at service-start
+    # time.
+    # ---------------------------------------------------------------------
+    services:
+      mysql:
+        image: mysql:8.0
+        ports:
+          - '3307:3306'
+        env:
+          MYSQL_DATABASE: p2p_platform_test
+          MYSQL_USER: p2p_test
+          MYSQL_PASSWORD: p2p_test_ci_password
+          MYSQL_ROOT_PASSWORD: p2p_test_ci_root_password
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -pp2p_test_ci_root_password"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+
+    env:
+      # --- Application environment -------------------------------------
+      APP_ENV: testing
+      APP_DEBUG: false
+      APP_URL: http://localhost
+      # The application key is supplied as an environment variable rather
+      # than written into an env file. This is deliberate: no `.env` file is
+      # created on the runner, so there is no possibility of the
+      # `.env.example` development defaults (`P2P_DB_CONNECTION=mysql_p2pdev`)
+      # leaking into the test run. The value is a throwaway CI key.
+      APP_KEY: base64:cDJwLWNpLXRocm93YXdheS1rZXktMDEyMzQ1Njc4OWE=
+
+      # --- Test database routing ---------------------------------------
+      # `P2P_DB_CONNECTION` is what `config/database.php` reads for the
+      # default connection. `DB_CONNECTION` is set as well so a stray
+      # reference cannot redirect the run. Both point at the CI-only MySQL
+      # service, never at the development instance.
+      DB_CONNECTION: mysql_p2ptest
+      P2P_DB_CONNECTION: mysql_p2ptest
+
+      P2PTEST_DB_HOST: 127.0.0.1
+      P2PTEST_DB_PORT: '3307'
+      P2PTEST_DB_DATABASE: p2p_platform_test
+      P2PTEST_DB_USERNAME: p2p_test
+      # Disposable CI-only password. `config/database.php` reads this
+      # environment variable FIRST, so the local secret file is never needed
+      # and never consulted on the runner.
+      P2PTEST_DB_PASSWORD: p2p_test_ci_password
+
+      # Disposable CI-only root password of the throwaway MySQL service.
+      # It is used by the "Enable MySQL trigger capability" step to open an
+      # admin connection and run `SET GLOBAL log_bin_trust_function_creators
+      # = 1`. It is not the password of any local or development database,
+      # and the application never uses it.
+      MYSQL_ROOT_PASSWORD: p2p_test_ci_root_password
+
+      # --- Test-time overrides (mirrors phpunit.xml) --------------------
+      BCRYPT_ROUNDS: '4'
+      CACHE_STORE: array
+      SESSION_DRIVER: array
+      QUEUE_CONNECTION: sync
+      MAIL_MAILER: array
+      # Quoted deliberately: unquoted, YAML parses `null` as a null value
+      # rather than the four-character string, and GitHub rejects a null
+      # environment variable value.
+      BROADCAST_CONNECTION: 'null'
+      PULSE_ENABLED: 'false'
+      TELESCOPE_ENABLED: 'false'
+      NIGHTWATCH_ENABLED: 'false'
+
+      # --- Frontend toolchain -------------------------------------------
+      # Node 22 (LTS). The minimum is 22.18.0 because `vite-plus@0.3.0`, the
+      # build and lint tool this project uses, declares the engine range
+      # `^20.19.0 || ^22.18.0 || >=24.11.0` in package-lock.json. `22.18.0`
+      # satisfies that range while staying on the 22 LTS line.
+      NODE_VERSION: '22.18.0'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # v2
+        with:
+          php-version: '8.3'
+          # Extensions required by the application's runtime and by the
+          # Composer packages in `composer.lock`. `pdo_mysql` is mandatory
+          # because the whole test suite runs against MySQL.
+          extensions: mbstring, dom, curl, openssl, pdo, pdo_mysql, zip, intl, bcmath, gd, fileinfo, tokenizer, json, ctype, filter, session, hash, iconv, xml, xmlwriter, simplexml, phar, posix, pcntl, exif
+          coverage: none
+          tools: composer:v2
+
+      - name: Set up Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          # Cache the npm download cache, keyed on the lockfile that actually
+          # drives the install. The path is relative to the repository root,
+          # not to the `p2p-platform` working directory.
+          cache: npm
+          cache-dependency-path: p2p-platform/package-lock.json
+
+      - name: Cache Composer packages
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: p2p-platform/vendor
+          key: composer-${{ runner.os }}-${{ hashFiles('p2p-platform/composer.lock') }}
+          restore-keys: composer-${{ runner.os }}-
+
+      - name: Install PHP dependencies
+        run: composer install --no-interaction --no-progress --prefer-dist
+
+      - name: Prepare the testing application
+        # Deliberately NOT `composer setup`: that script runs
+        # `php artisan migrate --force` using the defaults from
+        # `.env.example`, which point at the DEVELOPMENT connection. It also
+        # writes a `.env` file, which would put the development default
+        # `P2P_DB_CONNECTION=mysql_p2pdev` back into the environment.
+        #
+        # Instead: the APP_KEY is supplied as an environment variable (see
+        # the `env:` block above), so NO `.env` file is created at all, and
+        # the database is prepared only by the test suite itself, against the
+        # disposable CI MySQL service.
+        run: |
+          php artisan config:clear
+          php artisan --version
+          php -r "echo 'APP_KEY supplied via environment: ', (getenv('APP_KEY') ? 'yes' : 'no'), PHP_EOL; echo 'default connection: ', (getenv('P2P_DB_CONNECTION') ?: 'unset'), PHP_EOL;"
+
+      - name: Install frontend dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Enable MySQL trigger capability
+        # The ledger migrations install mandatory append-only TRIGGERS. On a
+        # server with binary logging enabled, MySQL refuses to create a
+        # trigger unless `log_bin_trust_function_creators` is enabled, and
+        # returns error 1419. The migrations are fail-closed by design, so
+        # they abort rather than silently skipping the triggers.
+        #
+        # The service container is already started and healthy at this point
+        # (GitHub waits for the health check before running any step), so the
+        # setting is applied here over an authenticated admin connection. This
+        # is the disposable CI-only root password of the throwaway MySQL
+        # service; no local or development credential is involved.
+        #
+        # `SET GLOBAL` needs the SUPER (or SYSTEM_VARIABLES_ADMIN) privilege,
+        # which the root account of the CI service has. It is applied to the
+        # running server, so it does not need any file inside the repository
+        # — which matters because service containers start before checkout.
+        run: |
+          php -r '
+            $host = getenv("P2PTEST_DB_HOST");
+            $port = (int) getenv("P2PTEST_DB_PORT");
+            $pass = getenv("MYSQL_ROOT_PASSWORD");
+            $dsn  = "mysql:host={$host};port={$port}";
+            $attempts = 0;
+            $pdo = null;
+            while ($attempts < 30) {
+                try {
+                    $pdo = new PDO($dsn, "root", $pass, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
+                    break;
+                } catch (Throwable $e) {
+                    $attempts++;
+                    sleep(2);
+                }
+            }
+            if ($pdo === null) {
+                fwrite(STDERR, "MySQL admin connection did not become reachable on {$host}:{$port}\n");
+                exit(1);
+            }
+            $pdo->exec("SET GLOBAL log_bin_trust_function_creators = 1");
+            $value = $pdo->query("SELECT @@GLOBAL.log_bin_trust_function_creators AS trust")->fetch(PDO::FETCH_ASSOC);
+            printf("log_bin_trust_function_creators = %s\n", $value["trust"]);
+            if ((int) $value["trust"] !== 1) {
+                fwrite(STDERR, "Could not enable log_bin_trust_function_creators; the ledger migrations would abort with error 1419.\n");
+                exit(1);
+            }
+            echo "Trigger capability enabled. The append-only ledger triggers will be installed for real.\n";
+          '
+
+      - name: Check the MySQL service is ready and trigger-capable
+        # Confirms the disposable service is actually up and that the
+        # append-only triggers can be created. If the server cannot create
+        # triggers, the ledger migrations abort by design — this step makes
+        # that cause explicit instead of a confusing migration failure.
+        run: |
+          php -r '
+            $host = getenv("P2PTEST_DB_HOST");
+            $port = (int) getenv("P2PTEST_DB_PORT");
+            $user = getenv("P2PTEST_DB_USERNAME");
+            $pass = getenv("P2PTEST_DB_PASSWORD");
+            $name = getenv("P2PTEST_DB_DATABASE");
+            $dsn  = "mysql:host={$host};port={$port};dbname={$name}";
+            $attempts = 0;
+            $pdo = null;
+            while ($attempts < 30) {
+                try {
+                    $pdo = new PDO($dsn, $user, $pass, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
+                    break;
+                } catch (Throwable $e) {
+                    $attempts++;
+                    sleep(2);
+                }
+            }
+            if ($pdo === null) {
+                fwrite(STDERR, "MySQL service did not become reachable on {$host}:{$port}\n");
+                exit(1);
+            }
+            $row = $pdo->query("SELECT @@log_bin AS log_bin, @@log_bin_trust_function_creators AS trust")->fetch(PDO::FETCH_ASSOC);
+            printf("MySQL reachable. log_bin=%s log_bin_trust_function_creators=%s\n", $row["log_bin"], $row["trust"]);
+            if ((int) $row["log_bin"] === 1 && (int) $row["trust"] !== 1) {
+                fwrite(STDERR, "The MySQL service cannot create triggers (error 1419 would abort the ledger migrations).\n");
+                exit(1);
+            }
+            echo "Trigger capability confirmed. The append-only ledger triggers will be installed for real.\n";
+          '
+
+      # -------------------------------------------------------------------
+      # PHP checks, in the order the project's own `composer test` script
+      # defines: code style first, then static analysis, then the suite.
+      # -------------------------------------------------------------------
+
+      - name: Check PHP code style (Pint)
+        run: composer lint:check
+
+      - name: Run PHP static analysis (Larastan / PHPStan)
+        run: composer types:check
+
+      - name: Run the test suite
+        # `php artisan test` runs the existing class-based PHPUnit tests.
+        # 28 of the 30 test files use `RefreshDatabase`, which runs
+        # `migrate:fresh` against the disposable CI MySQL service — the
+        # development database is never involved.
+        run: php artisan test
+
+      # -------------------------------------------------------------------
+      # Frontend checks, in the order the project's own `npm run check`
+      # script defines: formatting first, then the vite-plus linter.
+      # -------------------------------------------------------------------
+
+      - name: Check frontend formatting (Prettier)
+        run: npm run fmt:check
+
+      - name: Run frontend lint and type-aware checks (vite-plus)
+        run: npx vp check --no-fmt
+
+      - name: Run TypeScript type check
+        run: npm run types:check
+
+      - name: Build the frontend for production
+        run: npm run build
+
+      - name: Upload the CI report
+        if: always()
+        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.x
+        with:
+          name: ci-summary-${{ github.run_number }}
+          path: |
+            p2p-platform/storage/logs/*.log
+          if-no-files-found: ignore
+          retention-days: 7

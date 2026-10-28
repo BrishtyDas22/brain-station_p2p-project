@@ -18,11 +18,7 @@ export type TransactionStatus =
     | 'UNDER_REVIEW';
 
 export type KycStatus =
-    | 'NOT_SUBMITTED'
-    | 'PENDING'
-    | 'IN_REVIEW'
-    | 'APPROVED'
-    | 'REJECTED';
+    'NOT_SUBMITTED' | 'PENDING' | 'IN_REVIEW' | 'APPROVED' | 'REJECTED';
 
 export type RiskLevel = 'LOW' | 'MEDIUM' | 'HIGH';
 
@@ -47,21 +43,14 @@ export type LoanStatus =
  * These mirror `App\Enums\InstallmentStatus` exactly.
  */
 export type InstallmentStatus =
-    | 'PENDING'
-    | 'PAID'
-    | 'GRACE_PERIOD'
-    | 'DEFAULTED';
+    'PENDING' | 'PAID' | 'GRACE_PERIOD' | 'DEFAULTED';
 
 /**
  * The lifecycle of a "Withdraw Money" attempt.
  *
  * These mirror `App\Enums\WithdrawalStatus` exactly.
  */
-export type WithdrawalStatus =
-    | 'PENDING'
-    | 'SUCCEEDED'
-    | 'FAILED'
-    | 'CANCELLED';
+export type WithdrawalStatus = 'PENDING' | 'SUCCEEDED' | 'FAILED' | 'CANCELLED';
 
 /** The shape the app shell receives from Laravel's shared view data. */
 export type P2PUser = {

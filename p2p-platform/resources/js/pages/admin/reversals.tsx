@@ -52,21 +52,23 @@ type ReversalsProps = {
 const REVERSAL_STYLES: Record<string, string> = {
     REQUESTED:
         'border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300',
-    APPROVED:
-        'border-sky-500/30 bg-sky-500/10 text-sky-700 dark:text-sky-300',
+    APPROVED: 'border-sky-500/30 bg-sky-500/10 text-sky-700 dark:text-sky-300',
     EXECUTED:
         'border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300',
-    REJECTED: 'border-destructive/30 bg-destructive/10 text-destructive dark:text-red-400',
+    REJECTED:
+        'border-destructive/30 bg-destructive/10 text-destructive dark:text-red-400',
 };
 
 const PRIORITY_STYLES: Record<string, string> = {
     HIGH: 'border-destructive/30 bg-destructive/10 text-destructive dark:text-red-400',
-    MEDIUM:
-        'border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300',
+    MEDIUM: 'border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300',
     LOW: 'border-border bg-muted text-muted-foreground',
 };
 
-export default function AdminReversals({ reversals, disputes }: ReversalsProps) {
+export default function AdminReversals({
+    reversals,
+    disputes,
+}: ReversalsProps) {
     const openDisputes = disputes.filter((d) =>
         ['OPEN', 'IN_REVIEW'].includes(d.status),
     ).length;
@@ -81,10 +83,10 @@ export default function AdminReversals({ reversals, disputes }: ReversalsProps) 
             <div className="space-y-6">
                 <NoticeBanner tone="blocked">
                     The reversal and dispute tables are live records, but the
-                    compensating-entry engine is not built yet. No reversal can be
-                    executed and no dispute can be resolved from this screen — the
-                    one-shot guard and the balance-protection rules are enforced by the
-                    schema, not yet by a running service.
+                    compensating-entry engine is not built yet. No reversal can
+                    be executed and no dispute can be resolved from this screen
+                    — the one-shot guard and the balance-protection rules are
+                    enforced by the schema, not yet by a running service.
                 </NoticeBanner>
 
                 <div className="grid gap-4 sm:grid-cols-3">
@@ -105,7 +107,9 @@ export default function AdminReversals({ reversals, disputes }: ReversalsProps) 
                     <StatTile
                         label="Compensating entries"
                         value={
-                            reversals.filter((r) => r.compensatingEntryId !== null).length
+                            reversals.filter(
+                                (r) => r.compensatingEntryId !== null,
+                            ).length
                         }
                         hint="Reversals that produced a compensating entry"
                     />
@@ -115,9 +119,9 @@ export default function AdminReversals({ reversals, disputes }: ReversalsProps) 
                     <CardHeader>
                         <CardTitle>Reversal requests</CardTitle>
                         <CardDescription>
-                            A transaction can have at most one reversal — the unique
-                            index on <code>transaction_id</code> enforces that at the
-                            database level.
+                            A transaction can have at most one reversal — the
+                            unique index on <code>transaction_id</code> enforces
+                            that at the database level.
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
@@ -140,7 +144,10 @@ export default function AdminReversals({ reversals, disputes }: ReversalsProps) 
                                 ]}
                             >
                                 {reversals.map((reversal) => (
-                                    <tr key={reversal.id} className="hover:bg-muted/30">
+                                    <tr
+                                        key={reversal.id}
+                                        className="hover:bg-muted/30"
+                                    >
                                         <td className="px-4 py-3 font-mono text-xs font-medium">
                                             {reversal.transactionReference}
                                         </td>
@@ -155,8 +162,9 @@ export default function AdminReversals({ reversals, disputes }: ReversalsProps) 
                                                 variant="outline"
                                                 className={cn(
                                                     'font-medium',
-                                                    REVERSAL_STYLES[reversal.status] ??
-                                                        '',
+                                                    REVERSAL_STYLES[
+                                                        reversal.status
+                                                    ] ?? '',
                                                 )}
                                             >
                                                 {reversal.status}
@@ -205,8 +213,11 @@ export default function AdminReversals({ reversals, disputes }: ReversalsProps) 
                                                     {dispute.subject}
                                                 </p>
                                                 <p className="text-xs text-muted-foreground">
-                                                    {dispute.transactionReference} ·
-                                                    opened by {dispute.openedBy}
+                                                    {
+                                                        dispute.transactionReference
+                                                    }{' '}
+                                                    · opened by{' '}
+                                                    {dispute.openedBy}
                                                 </p>
                                             </div>
                                             <div className="flex shrink-0 gap-2">
@@ -214,8 +225,9 @@ export default function AdminReversals({ reversals, disputes }: ReversalsProps) 
                                                     variant="outline"
                                                     className={cn(
                                                         'font-medium',
-                                                        PRIORITY_STYLES[dispute.priority] ??
-                                                            '',
+                                                        PRIORITY_STYLES[
+                                                            dispute.priority
+                                                        ] ?? '',
                                                     )}
                                                 >
                                                     {dispute.priority}
@@ -243,7 +255,10 @@ export default function AdminReversals({ reversals, disputes }: ReversalsProps) 
                                             />
                                             <DetailRow
                                                 label="Resolved"
-                                                value={dispute.resolvedAt ?? 'Not resolved'}
+                                                value={
+                                                    dispute.resolvedAt ??
+                                                    'Not resolved'
+                                                }
                                             />
                                         </dl>
                                     </div>

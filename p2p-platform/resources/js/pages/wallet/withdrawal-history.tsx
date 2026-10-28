@@ -8,11 +8,7 @@ import {
     CardHeader,
     CardTitle,
 } from '@/components/ui/card';
-import {
-    DataTable,
-    EmptyState,
-    WithdrawalStatusBadge,
-} from '@/p2p/components';
+import { DataTable, EmptyState, WithdrawalStatusBadge } from '@/p2p/components';
 import { formatMoney } from '@/p2p/money';
 import type { WithdrawalStatus } from '@/p2p/types';
 
