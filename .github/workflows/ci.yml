@@ -251,17 +251,30 @@ jobs:
         run: npm ci --no-audit --no-fund
 
       # -------------------------------------------------------------------
-      # Frontend checks, in the order the project's own `npm run check`
-      # script defines: formatting first, then the vite-plus linter.
+      # Frontend checks and the production build, in the order the
+      # project's own `npm run check` script defines: formatting first,
+      # then the vite-plus linter.
       #
-      # These run BEFORE the PHP test suite because the Blade layout uses
-      # `@vite(...)`, which resolves assets through the Vite manifest at
-      # `public/build/manifest.json`. That path is git-ignored, so the
-      # manifest only exists once the frontend has been built. Without this
-      # build, every view-rendering test fails with
-      # `ViteManifestNotFoundException` and a 500 response.
+      # These run BEFORE the PHP test suite for two independent reasons.
       #
-      # The production build is therefore performed exactly once, here.
+      # 1. The Blade layout uses `@vite(...)`, which resolves assets
+      #    through the Vite manifest at `public/build/manifest.json`. That
+      #    path is git-ignored, so the manifest only exists once the
+      #    frontend has been built. Without the build, every view-rendering
+      #    test fails with `ViteManifestNotFoundException` and a 500.
+      #
+      # 2. The build is also what generates the Wayfinder modules. The
+      #    `@laravel/vite-plugin-wayfinder` plugin runs
+      #    `php artisan wayfinder:generate --with-form` during the build,
+      #    writing `resources/js/routes`, `resources/js/actions` and
+      #    `resources/js/wayfinder`. All three are git-ignored, so on a
+      #    fresh checkout they do not exist, and the application code that
+      #    imports them (`import { dashboard } from '@/routes'`) cannot be
+      #    type-checked. `tsc` then fails with "TS2307: Cannot find
+      #    module '@/routes'" for every such import.
+      #
+      # For that reason the production build MUST run BEFORE the TypeScript
+      # type check. The build is performed exactly once, here.
       # -------------------------------------------------------------------
 
       - name: Check frontend formatting (Prettier)
@@ -269,9 +282,6 @@ jobs:
 
       - name: Run frontend lint and type-aware checks (vite-plus)
         run: npx vp check --no-fmt
-
-      - name: Run TypeScript type check
-        run: npm run types:check
 
       - name: Build the frontend for production
         run: npm run build
@@ -286,6 +296,11 @@ jobs:
             exit 1
           }
           echo "Vite manifest present: public/build/manifest.json"
+
+      - name: Run TypeScript type check
+        # Runs AFTER the build, because the build is what generates the
+        # git-ignored Wayfinder modules that this check resolves.
+        run: npm run types:check
 
       - name: Enable MySQL trigger capability
         # The ledger migrations install mandatory append-only TRIGGERS. On a
