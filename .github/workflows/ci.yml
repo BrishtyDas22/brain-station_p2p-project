@@ -148,6 +148,30 @@ jobs:
         with:
           persist-credentials: false
 
+      - name: Prepare writable storage and cache directories
+        # The framework resolves the compiled Blade view path with
+        # `realpath(storage_path('framework/views'))`. That directory is
+        # git-ignored, so it is absent on a fresh checkout and `realpath()`
+        # returns false. `Illuminate\View\Compilers\Compiler` then rejects
+        # the falsey path with "Please provide a valid cache path.", and every
+        # test that renders a view fails with a 500.
+        #
+        # `storage/logs`, `storage/framework/views` and
+        # `storage/framework/sessions` are git-ignored and therefore never
+        # present after checkout. `storage/framework/cache/data` and
+        # `bootstrap/cache` do ship a tracked `.gitignore`, but they are
+        # created empty, so all five are created explicitly here.
+        #
+        # `mkdir -p` is idempotent and creates parents as needed, so it is
+        # safe for directories that already exist.
+        run: |
+          mkdir -p \
+            storage/framework/views \
+            storage/framework/cache/data \
+            storage/framework/sessions \
+            storage/logs \
+            bootstrap/cache
+
       - name: Set up PHP
         uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # v2
         with:
@@ -158,6 +182,34 @@ jobs:
           extensions: mbstring, dom, curl, openssl, pdo, pdo_mysql, zip, intl, bcmath, gd, fileinfo, tokenizer, json, ctype, filter, session, hash, iconv, xml, xmlwriter, simplexml, phar, posix, pcntl, exif
           coverage: none
           tools: composer:v2
+
+      - name: Verify the compiled view path resolves
+        # Guards the exact condition that broke the first run: the compiled
+        # view path must resolve to an existing, writable directory. If it
+        # does not, fail here with a clear message instead of letting 41 view
+        # tests fail with a misleading 500.
+        #
+        # This runs after "Set up PHP" so the check uses the same PHP
+        # version and extension set as the test suite, and it still runs
+        # before Composer install, so a missing directory is reported
+        # immediately rather than surfacing later as a view-rendering 500.
+        #
+        # The path is spelled out rather than using Laravel's `storage_path()`
+        # helper, because that helper only exists inside the framework and is
+        # not available in a bare `php -r` invocation.
+        run: |
+          php -r '
+            $path = realpath(__DIR__ . "/storage/framework/views");
+            if ($path === false) {
+                fwrite(STDERR, "The compiled view path does not resolve: storage/framework/views is missing.\n");
+                exit(1);
+            }
+            if (! is_writable($path)) {
+                fwrite(STDERR, "The compiled view path is not writable: {$path}\n");
+                exit(1);
+            }
+            printf("compiled view path: %s (writable)\n", $path);
+          '
 
       - name: Set up Node
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
