@@ -250,6 +250,43 @@ jobs:
       - name: Install frontend dependencies
         run: npm ci --no-audit --no-fund
 
+      # -------------------------------------------------------------------
+      # Frontend checks, in the order the project's own `npm run check`
+      # script defines: formatting first, then the vite-plus linter.
+      #
+      # These run BEFORE the PHP test suite because the Blade layout uses
+      # `@vite(...)`, which resolves assets through the Vite manifest at
+      # `public/build/manifest.json`. That path is git-ignored, so the
+      # manifest only exists once the frontend has been built. Without this
+      # build, every view-rendering test fails with
+      # `ViteManifestNotFoundException` and a 500 response.
+      #
+      # The production build is therefore performed exactly once, here.
+      # -------------------------------------------------------------------
+
+      - name: Check frontend formatting (Prettier)
+        run: npm run fmt:check
+
+      - name: Run frontend lint and type-aware checks (vite-plus)
+        run: npx vp check --no-fmt
+
+      - name: Run TypeScript type check
+        run: npm run types:check
+
+      - name: Build the frontend for production
+        run: npm run build
+
+      - name: Verify the Vite manifest exists
+        # Confirms the build produced the manifest the Blade layout needs,
+        # so a broken or partial build fails here with a clear message
+        # instead of surfacing as 41 view-rendering 500s in the test suite.
+        run: |
+          test -f public/build/manifest.json || {
+            echo "public/build/manifest.json is missing; the frontend build did not produce it." >&2
+            exit 1
+          }
+          echo "Vite manifest present: public/build/manifest.json"
+
       - name: Enable MySQL trigger capability
         # The ledger migrations install mandatory append-only TRIGGERS. On a
         # server with binary logging enabled, MySQL refuses to create a
@@ -351,24 +388,10 @@ jobs:
         # 28 of the 30 test files use `RefreshDatabase`, which runs
         # `migrate:fresh` against the disposable CI MySQL service — the
         # development database is never involved.
+        #
+        # The frontend has already been built above, so the Vite manifest
+        # exists and the view-rendering tests can resolve their assets.
         run: php artisan test
-
-      # -------------------------------------------------------------------
-      # Frontend checks, in the order the project's own `npm run check`
-      # script defines: formatting first, then the vite-plus linter.
-      # -------------------------------------------------------------------
-
-      - name: Check frontend formatting (Prettier)
-        run: npm run fmt:check
-
-      - name: Run frontend lint and type-aware checks (vite-plus)
-        run: npx vp check --no-fmt
-
-      - name: Run TypeScript type check
-        run: npm run types:check
-
-      - name: Build the frontend for production
-        run: npm run build
 
       - name: Upload the CI report
         if: always()
