@@ -471,8 +471,41 @@ jobs:
         run: |
           set -euo pipefail
 
-          artifact_dir="release-artifact"
-          staging_dir="release-artifact-stage"
+          # PATH ANCHORING — read this before changing anything below.
+          #
+          # This job sets `defaults.run.working-directory: p2p-platform`, so a
+          # RELATIVE path in a `run:` script is resolved against
+          # `$GITHUB_WORKSPACE/p2p-platform`, NOT against the workspace root.
+          #
+          # `actions/upload-artifact` resolves its `path:` input relative to
+          # the REPOSITORY WORKSPACE ROOT (`$GITHUB_WORKSPACE`). Action inputs
+          # are not affected by `defaults.run.working-directory` — that
+          # setting only applies to `run:` steps.
+          #
+          # Those two roots differ, so a relative path written in one place
+          # and used in the other silently points at a directory that does
+          # not exist, and the upload fails with "No files were found with
+          # the provided path".
+          #
+          # To make that class of bug impossible, every path here is
+          # absolute and derived from `$GITHUB_WORKSPACE`, and the artifact
+          # is written to a directory that is IDENTICAL whether it is
+          # addressed from the workspace root or from the job's working
+          # directory.
+          #
+          # `$GITHUB_WORKSPACE` is the repository root:
+          #   /home/runner/work/<repo>/<repo>
+          # The application lives one level down in `p2p-platform/`, and
+          # `git archive` below is run from that subdirectory, so the
+          # repository tree it reads is still the one that was tested.
+          workspace="$GITHUB_WORKSPACE"
+          artifact_dir="$workspace/release-artifact"
+          staging_dir="$workspace/release-artifact-stage"
+
+          echo "Workspace root : $workspace"
+          echo "Working dir    : $(pwd)"
+          echo "Artifact dir   : $artifact_dir"
+          echo "Staging dir    : $staging_dir"
 
           rm -rf "$artifact_dir" "$staging_dir"
           mkdir -p "$artifact_dir" "$staging_dir"
@@ -538,25 +571,62 @@ jobs:
 
           # Create the tarball. Deterministic flags keep the artifact
           # byte-identical between the build and both deploy jobs.
+          artifact_path="$artifact_dir/p2p-platform-${DEPLOY_VERSION}.tar.gz"
+
           tar --sort=name \
               --mtime="UTC 2020-01-01" \
               --owner=0 --group=0 --numeric-owner \
               --mtime="@0" \
-              -czf "$artifact_dir/p2p-platform-${DEPLOY_VERSION}.tar.gz" \
+              -czf "$artifact_path" \
               -C "$staging_dir" .
 
+          # FILE-EXISTENCE CHECK, before the upload step runs.
+          #
+          # `actions/upload-artifact` only reports "No files were found with
+          # the provided path" AFTER the fact, which makes the cause of such
+          # a failure hard to see. Checking here fails in the build step,
+          # with the exact path that was expected and the directory that was
+          # actually written to.
+          #
+          # The check also proves the artifact is a non-empty gzip tarball
+          # rather than a zero-byte file, and that it is readable.
+          if [ ! -f "$artifact_path" ]; then
+            echo "::error::The release artifact was not created at ${artifact_path}."
+            echo "::error::Artifact directory listing:"
+            ls -la "$artifact_dir" || true
+            exit 1
+          fi
+
+          if [ ! -s "$artifact_path" ]; then
+            echo "::error::The release artifact at ${artifact_path} is empty."
+            exit 1
+          fi
+
+          if ! tar -tzf "$artifact_path" > /dev/null; then
+            echo "::error::The release artifact at ${artifact_path} is not a readable gzip tarball."
+            exit 1
+          fi
+
           echo "artifact_name=p2p-platform-${DEPLOY_VERSION}.tar.gz" >> "$GITHUB_OUTPUT"
+          echo "artifact_path=$artifact_path" >> "$GITHUB_OUTPUT"
 
           echo "Release artifact contents (top level):"
           ls -la "$staging_dir"
           echo ""
           echo "Artifact built from commit ${DEPLOY_COMMIT} (version ${DEPLOY_VERSION})."
-          echo "Size: $(du -h "$artifact_dir/p2p-platform-${DEPLOY_VERSION}.tar.gz" | cut -f1)"
+          echo "Artifact path: ${artifact_path}"
+          echo "Size: $(du -h "$artifact_path" | cut -f1)"
 
       - name: Upload the release artifact
         uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.x
         with:
           name: release-artifact-${{ needs.resolve-version.outputs.version }}
+          # The upload path MUST be expressed relative to the repository
+          # workspace root, because that is how `actions/upload-artifact`
+          # resolves it — action inputs ignore `defaults.run.working-directory`.
+          #
+          # The build step above writes to exactly this location
+          # (`$GITHUB_WORKSPACE/release-artifact/`), so the two now agree.
           path: release-artifact/p2p-platform-${{ needs.resolve-version.outputs.version }}.tar.gz
           if-no-files-found: error
           retention-days: 14
