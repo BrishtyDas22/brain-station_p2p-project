@@ -62,7 +62,7 @@ class TransactionController extends Controller
 
         $transactions = $query->latest()->paginate(15)->withQueryString();
 
-        return Inertia::render('transactions/index', [
+        return Inertia::render('transactions/history', [
             'transactions' => $transactions->through(fn (Transaction $t): array => [
                 'id' => $t->id,
                 'reference' => $t->reference,
