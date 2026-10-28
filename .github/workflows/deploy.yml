@@ -1,0 +1,1043 @@
+name: Deploy
+
+# ===========================================================================
+# SIMULATED CONTINUOUS DELIVERY
+#
+# This workflow follows the "Inventory Demo Lesson 11" pipeline shape:
+#
+#     test/build  ->  deploy-staging  ->  [manual approval]  ->  deploy-production
+#
+# It is adapted to this Laravel + React + MySQL project.
+#
+# WHAT IS REAL:
+#   - The GitHub Environments `staging` and `production`.
+#   - The `production` required-reviewer approval gate. GitHub pauses the
+#     run and waits for BrishtyDas22 to approve. Self-review is allowed, so
+#     a single reviewer can approve their own deployment.
+#   - The deployment history and audit trail recorded on each Environment.
+#   - The artifact built from the tested checkout, shared byte-for-byte
+#     between staging and production.
+#
+# WHAT IS SIMULATED:
+#   - "Deploying" means copying the artifact into a temporary folder on the
+#     GitHub runner. There is NO Docker packaging, NO hosting, NO upload to
+#     any server, and NO external deployment of any kind.
+#   - The application is NOT live. Nothing is served to real users.
+#
+# Every deployment output is labelled SIMULATED so the run log can never be
+# mistaken for a real production deployment.
+# ===========================================================================
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: >-
+          Version/tag to deploy (e.g. v1.0.0). Must be an existing tag; this
+          workflow never creates, moves or re-creates a tag. Leave empty to
+          deploy the tag of the release that triggered the run.
+        required: false
+        type: string
+        default: ''
+
+permissions:
+  contents: read
+
+# ---------------------------------------------------------------------------
+# Serialize deployments. `cancel-in-progress: false` means a deployment that
+# is already running is never cancelled by a newer one — it finishes, and the
+# newer run waits its turn. This is deliberate: cancelling mid-deployment
+# could leave an environment in a half-deployed state.
+#
+# The group is keyed on the workflow name only (not the ref), so a manual
+# rollback to v1.0.0 queues behind an in-flight deployment of any other
+# version rather than running concurrently with it.
+# ---------------------------------------------------------------------------
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+jobs:
+  # =========================================================================
+  # Job 1 — resolve-version
+  #
+  # Resolves the requested version to ONE exact commit SHA and publishes it
+  # as a job output. Every downstream job consumes this single SHA, so the
+  # code that is tested, the artifact that is built, the artifact that is
+  # copied into staging, and the artifact that is copied into production are
+  # all guaranteed to come from the same commit.
+  #
+  # The tag is READ ONLY. It is resolved with `git rev-parse <tag>^{commit}`,
+  # which never creates or moves a tag. Selecting the existing v1.0.0 is
+  # therefore a read-only operation.
+  # =========================================================================
+  resolve-version:
+    name: Resolve version to a commit
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.resolve.outputs.version }}
+      commit: ${{ steps.resolve.outputs.commit }}
+      short_commit: ${{ steps.resolve.outputs.short_commit }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          # Fetch every tag so the requested version can be resolved below.
+          # `fetch-depth: 0` also gives full history for the artifact build.
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Resolve the selected version to one exact commit
+        id: resolve
+        env:
+          # `inputs.version` is only set for workflow_dispatch. For a
+          # `release: published` trigger, `github.ref_name` is the tag of the
+          # release that was just published. The input wins when present so
+          # an operator can always deploy an explicit tag.
+          REQUESTED_VERSION: ${{ inputs.version || github.ref_name }}
+          # The triggering ref, passed as an environment variable.
+          #
+          # GitHub DOES expand `${{ }}` expressions before a `run:` script
+          # is handed to the shell, so an expression written directly in
+          # the script body would in fact be substituted. It is passed
+          # through the environment here anyway, because doing so keeps
+          # the substitution in one place, avoids any quoting ambiguity
+          # in the shell, and makes the value available to every step of
+          # the job.
+          TRIGGERING_REF_NAME: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+
+          version="${REQUESTED_VERSION}"
+
+          if [ -z "$version" ]; then
+            echo "::error::No version was supplied. Triggered by release (tag '${TRIGGERING_REF_NAME}') with no usable ref_name, and no 'version' input was given."
+            exit 1
+          fi
+
+          # The version may be given as `v1.0.0` or as a bare commit-ish.
+          # Accept only an existing tag so this workflow can never create,
+          # move, or re-create one.
+          if ! git rev-parse --verify --quiet "refs/tags/${version}^{commit}" >/dev/null; then
+            echo "::error::Tag '${version}' does not exist in this repository. This workflow does not create tags. Existing tags:"
+            git tag --list | sed 's/^/  /'
+            exit 1
+          fi
+
+          commit="$(git rev-parse "refs/tags/${version}^{commit}")"
+          short_commit="$(git rev-parse --short=7 "refs/tags/${version}^{commit}")"
+
+          {
+            echo "version=${version}"
+            echo "commit=${commit}"
+            echo "short_commit=${short_commit}"
+          } >> "$GITHUB_OUTPUT"
+
+          echo "Resolved version   : ${version}"
+          echo "Resolved commit    : ${commit}"
+          echo "Short commit       : ${short_commit}"
+          echo ""
+          echo "This exact commit will be checked out, tested, built into the release"
+          echo "artifact, and then copied into BOTH the staging and the production"
+          echo "simulated deploy folders. The tag is read only and is not modified."
+
+  # =========================================================================
+  # Job 2 — test-build
+  #
+  # Runs the exact check and test sequence already proven by the CI
+  # workflow, against the resolved commit, and then builds the release
+  # artifact FROM THAT SAME CHECKOUT.
+  #
+  # The environment mirrors `ci.yml`:
+  #   - PHP 8.3 with the extensions the app and composer.lock need.
+  #   - Node 22.18.0 (the minimum `vite-plus@0.3.0` accepts).
+  #   - Writable storage directories created after checkout, because
+  #     `storage/framework/views` is git-ignored and `realpath()` returns
+  #     false for a missing directory, which makes the framework throw
+  #     "Please provide a valid cache path.".
+  #   - An isolated, disposable MySQL 8.0 service on host port 3307, with
+  #     real append-only ledger TRIGGERS enabled through an authenticated
+  #     admin connection (`log_bin_trust_function_creators = 1`) rather than
+  #     any test-only bypass.
+  #   - The frontend production build runs BEFORE the TypeScript check,
+  #     because the Wayfinder plugin generates `resources/js/routes`,
+  #     `resources/js/actions` and `resources/js/wayfinder` during the build
+  #     and those git-ignored modules are what `tsc` resolves.
+  #
+  # If anything here fails, no artifact is produced and both deployment jobs
+  # are skipped.
+  # =========================================================================
+  test-build:
+    name: Test and build release artifact
+    needs: resolve-version
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: p2p-platform
+
+    services:
+      mysql:
+        image: mysql:8.0
+        ports:
+          - '3307:3306'
+        env:
+          MYSQL_DATABASE: p2p_platform_test
+          MYSQL_USER: p2p_test
+          MYSQL_PASSWORD: p2p_test_ci_password
+          MYSQL_ROOT_PASSWORD: p2p_test_ci_root_password
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -pp2p_test_ci_root_password"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+
+    env:
+      # --- Application environment -------------------------------------
+      APP_ENV: testing
+      APP_DEBUG: false
+      APP_URL: http://localhost
+      APP_KEY: base64:cDJwLWNpLXRocm93YXdheS1rZXktMDEyMzQ1Njc4OWE=
+
+      # --- Test database routing ---------------------------------------
+      DB_CONNECTION: mysql_p2ptest
+      P2P_DB_CONNECTION: mysql_p2ptest
+      P2PTEST_DB_HOST: 127.0.0.1
+      P2PTEST_DB_PORT: '3307'
+      P2PTEST_DB_DATABASE: p2p_platform_test
+      P2PTEST_DB_USERNAME: p2p_test
+      P2PTEST_DB_PASSWORD: p2p_test_ci_password
+      MYSQL_ROOT_PASSWORD: p2p_test_ci_root_password
+
+      # --- Test-time overrides (mirrors phpunit.xml) --------------------
+      BCRYPT_ROUNDS: '4'
+      CACHE_STORE: array
+      SESSION_DRIVER: array
+      QUEUE_CONNECTION: sync
+      MAIL_MAILER: array
+      BROADCAST_CONNECTION: 'null'
+      PULSE_ENABLED: 'false'
+      TELESCOPE_ENABLED: 'false'
+      NIGHTWATCH_ENABLED: 'false'
+
+      # --- Frontend toolchain -------------------------------------------
+      NODE_VERSION: '22.18.0'
+
+      # --- Resolved version ---------------------------------------------
+      # Consumed by every step of every job. One value, set once in
+      # `resolve-version`, used everywhere.
+      DEPLOY_VERSION: ${{ needs.resolve-version.outputs.version }}
+      DEPLOY_COMMIT: ${{ needs.resolve-version.outputs.commit }}
+      DEPLOY_SHORT_COMMIT: ${{ needs.resolve-version.outputs.short_commit }}
+
+    steps:
+      - name: Checkout the resolved commit
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          # The resolved SHA — not a tag name and not a branch. This is the
+          # same SHA every later job uses.
+          ref: ${{ needs.resolve-version.outputs.commit }}
+
+      - name: Confirm the checked-out code is the resolved commit
+        run: |
+          set -euo pipefail
+          actual="$(git rev-parse HEAD)"
+          echo "Expected commit : ${DEPLOY_COMMIT}"
+          echo "Checked-out HEAD: ${actual}"
+          if [ "$actual" != "$DEPLOY_COMMIT" ]; then
+            echo "::error::Checked-out commit does not match the resolved commit."
+            exit 1
+          fi
+          echo "Confirmed: the working tree is exactly commit ${DEPLOY_SHORT_COMMIT} of version ${DEPLOY_VERSION}."
+
+      - name: Prepare writable storage and cache directories
+        # `storage/framework/views` (and the sibling directories) are
+        # git-ignored, so they do not exist after checkout. The framework
+        # resolves the compiled Blade path with
+        # `realpath(storage_path('framework/views'))`; when that returns
+        # false the view compiler throws "Please provide a valid cache
+        # path." and every view-rendering test fails with a 500.
+        run: |
+          mkdir -p \
+            storage/framework/views \
+            storage/framework/cache/data \
+            storage/framework/sessions \
+            storage/logs \
+            bootstrap/cache
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # v2
+        with:
+          php-version: '8.3'
+          extensions: mbstring, dom, curl, openssl, pdo, pdo_mysql, zip, intl, bcmath, gd, fileinfo, tokenizer, json, ctype, filter, session, hash, iconv, xml, xmlwriter, simplexml, phar, posix, pcntl, exif
+          coverage: none
+          tools: composer:v2
+
+      - name: Verify the compiled view path resolves
+        run: |
+          php -r '
+            $path = realpath(__DIR__ . "/storage/framework/views");
+            if ($path === false) {
+                fwrite(STDERR, "The compiled view path does not resolve: storage/framework/views is missing.\n");
+                exit(1);
+            }
+            if (! is_writable($path)) {
+                fwrite(STDERR, "The compiled view path is not writable: {$path}\n");
+                exit(1);
+            }
+            printf("compiled view path: %s (writable)\n", $path);
+          '
+
+      - name: Set up Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: p2p-platform/package-lock.json
+
+      - name: Cache Composer packages
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: p2p-platform/vendor
+          key: composer-${{ runner.os }}-${{ hashFiles('p2p-platform/composer.lock') }}
+          restore-keys: composer-${{ runner.os }}-
+
+      - name: Install PHP dependencies
+        run: composer install --no-interaction --no-progress --prefer-dist
+
+      - name: Prepare the testing application
+        # Deliberately NOT `composer setup`: that script runs
+        # `php artisan migrate --force` against the connection configured by
+        # `.env.example`, which points at the DEVELOPMENT database. Here the
+        # APP_KEY is supplied as an environment variable and no `.env` file
+        # is created at all, so the development defaults can never leak in.
+        run: |
+          php artisan config:clear
+          php artisan --version
+          php -r "echo 'APP_KEY supplied via environment: ', (getenv('APP_KEY') ? 'yes' : 'no'), PHP_EOL; echo 'default connection: ', (getenv('P2P_DB_CONNECTION') ?: 'unset'), PHP_EOL;"
+
+      - name: Install frontend dependencies
+        run: npm ci --no-audit --no-fund
+
+      # -------------------------------------------------------------------
+      # Frontend checks and the production build.
+      #
+      # The build MUST run before the TypeScript check: the
+      # `@laravel/vite-plugin-wayfinder` plugin runs
+      # `php artisan wayfinder:generate --with-form` during the build,
+      # writing the git-ignored `resources/js/routes`,
+      # `resources/js/actions` and `resources/js/wayfinder` modules that the
+      # application code imports and that `tsc` has to resolve.
+      #
+      # The build also produces `public/build/manifest.json`, which the
+      # Blade layout needs via `@vite(...)`. Without it every
+      # view-rendering test fails with `ViteManifestNotFoundException`.
+      # -------------------------------------------------------------------
+
+      - name: Check frontend formatting (Prettier)
+        run: npm run fmt:check
+
+      - name: Run frontend lint and type-aware checks (vite-plus)
+        run: npx vp check --no-fmt
+
+      - name: Build the frontend for production
+        run: npm run build
+
+      - name: Verify the Vite manifest exists
+        run: |
+          test -f public/build/manifest.json || {
+            echo "public/build/manifest.json is missing; the frontend build did not produce it." >&2
+            exit 1
+          }
+          echo "Vite manifest present: public/build/manifest.json"
+
+      - name: Run TypeScript type check
+        run: npm run types:check
+
+      - name: Enable MySQL trigger capability
+        # The ledger migrations install mandatory append-only TRIGGERS. On a
+        # server with binary logging enabled, MySQL refuses to create a
+        # trigger unless `log_bin_trust_function_creators` is enabled and
+        # returns error 1419. The migrations are fail-closed by design, so
+        # they abort rather than silently skipping the triggers.
+        #
+        # The setting is applied at runtime over an authenticated admin
+        # connection to the disposable CI-only MySQL service. No local or
+        # development credential is involved, and the real trigger
+        # enforcement stays ON.
+        run: |
+          php -r '
+            $host = getenv("P2PTEST_DB_HOST");
+            $port = (int) getenv("P2PTEST_DB_PORT");
+            $pass = getenv("MYSQL_ROOT_PASSWORD");
+            $dsn  = "mysql:host={$host};port={$port}";
+            $attempts = 0;
+            $pdo = null;
+            while ($attempts < 30) {
+                try {
+                    $pdo = new PDO($dsn, "root", $pass, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
+                    break;
+                } catch (Throwable $e) {
+                    $attempts++;
+                    sleep(2);
+                }
+            }
+            if ($pdo === null) {
+                fwrite(STDERR, "MySQL admin connection did not become reachable on {$host}:{$port}\n");
+                exit(1);
+            }
+            $pdo->exec("SET GLOBAL log_bin_trust_function_creators = 1");
+            $value = $pdo->query("SELECT @@GLOBAL.log_bin_trust_function_creators AS trust")->fetch(PDO::FETCH_ASSOC);
+            printf("log_bin_trust_function_creators = %s\n", $value["trust"]);
+            if ((int) $value["trust"] !== 1) {
+                fwrite(STDERR, "Could not enable log_bin_trust_function_creators; the ledger migrations would abort with error 1419.\n");
+                exit(1);
+            }
+            echo "Trigger capability enabled. The append-only ledger triggers will be installed for real.\n";
+          '
+
+      - name: Check the MySQL service is ready and trigger-capable
+        run: |
+          php -r '
+            $host = getenv("P2PTEST_DB_HOST");
+            $port = (int) getenv("P2PTEST_DB_PORT");
+            $user = getenv("P2PTEST_DB_USERNAME");
+            $pass = getenv("P2PTEST_DB_PASSWORD");
+            $name = getenv("P2PTEST_DB_DATABASE");
+            $dsn  = "mysql:host={$host};port={$port};dbname={$name}";
+            $attempts = 0;
+            $pdo = null;
+            while ($attempts < 30) {
+                try {
+                    $pdo = new PDO($dsn, $user, $pass, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
+                    break;
+                } catch (Throwable $e) {
+                    $attempts++;
+                    sleep(2);
+                }
+            }
+            if ($pdo === null) {
+                fwrite(STDERR, "MySQL service did not become reachable on {$host}:{$port}\n");
+                exit(1);
+            }
+            $row = $pdo->query("SELECT @@log_bin AS log_bin, @@log_bin_trust_function_creators AS trust")->fetch(PDO::FETCH_ASSOC);
+            printf("MySQL reachable. log_bin=%s log_bin_trust_function_creators=%s\n", $row["log_bin"], $row["trust"]);
+            if ((int) $row["log_bin"] === 1 && (int) $row["trust"] !== 1) {
+                fwrite(STDERR, "The MySQL service cannot create triggers (error 1419 would abort the ledger migrations).\n");
+                exit(1);
+            }
+            echo "Trigger capability confirmed. The append-only ledger triggers will be installed for real.\n";
+          '
+
+      - name: Check PHP code style (Pint)
+        run: composer lint:check
+
+      - name: Run PHP static analysis (Larastan / PHPStan)
+        run: composer types:check
+
+      - name: Run the test suite
+        # `php artisan test` runs the existing class-based PHPUnit tests.
+        # 28 of the 30 test files use `RefreshDatabase`, which runs
+        # `migrate:fresh` against the disposable CI MySQL service — the
+        # development database is never involved.
+        #
+        # The frontend was built above, so the Vite manifest exists and the
+        # view-rendering tests can resolve their assets.
+        run: php artisan test
+
+      # -------------------------------------------------------------------
+      # Release artifact
+      #
+      # Built FROM this tested checkout, so the artifact contains exactly
+      # the code that just passed every check above.
+      #
+      # Excluded on purpose:
+      #   - `.env` and every environment file (secrets)
+      #   - `.git` (history and credentials)
+      #   - `storage/logs` (local logs)
+      #   - `node_modules`, `vendor` (installed on the target side)
+      #   - local developer data (`.idea`, `.vscode`, agent state, caches)
+      #
+      # `public/build` IS included: it is the production frontend build that
+      # the Blade layout resolves through the Vite manifest.
+      # -------------------------------------------------------------------
+      - name: Build the release artifact
+        id: artifact
+        run: |
+          set -euo pipefail
+
+          artifact_dir="release-artifact"
+          staging_dir="release-artifact-stage"
+
+          rm -rf "$artifact_dir" "$staging_dir"
+          mkdir -p "$artifact_dir" "$staging_dir"
+
+          # Copy the tracked application files from the tested checkout.
+          # `git archive` uses the index/tree, so nothing untracked, nothing
+          # from `.git`, and nothing ignored (such as `.env`) can leak in.
+          git archive --format=tar --prefix=p2p-platform/ HEAD \
+            | tar -x -C "$staging_dir"
+
+          # Belt and braces: remove anything that must never ship, even if
+          # it were somehow present in the tree.
+          rm -rf "$staging_dir/p2p-platform/.git"
+          rm -rf "$staging_dir"/p2p-platform/.env
+          rm -rf "$staging_dir"/p2p-platform/.env.*
+          rm -rf "$staging_dir"/p2p-platform/storage/logs
+          rm -rf "$staging_dir"/p2p-platform/storage/framework/cache/data
+          rm -rf "$staging_dir"/p2p-platform/storage/framework/sessions
+          rm -rf "$staging_dir"/p2p-platform/storage/framework/views
+          rm -rf "$staging_dir"/p2p-platform/storage/app/*.php
+          rm -rf "$staging_dir"/p2p-platform/storage/app/*.txt
+          rm -rf "$staging_dir"/p2p-platform/storage/app/*.json
+          rm -rf "$staging_dir"/p2p-platform/node_modules
+          rm -rf "$staging_dir"/p2p-platform/vendor
+          rm -rf "$staging_dir"/p2p-platform/.idea
+          rm -rf "$staging_dir"/p2p-platform/.vscode
+          rm -rf "$staging_dir"/p2p-platform/.puku-cli
+          rm -rf "$staging_dir"/p2p-platform/_bmad
+          rm -rf "$staging_dir"/p2p-platform/.phpunit.cache
+          rm -f  "$staging_dir/p2p-platform/.phpunit.result.cache"
+
+          # Copy the freshly built frontend into the artifact. It is
+          # git-ignored, so `git archive` did not include it, but the Blade
+          # layout needs it via the Vite manifest.
+          mkdir -p "$staging_dir/p2p-platform/public/build"
+          cp -a public/build/. "$staging_dir/p2p-platform/public/build/"
+
+          # Recreate the writable directories the framework needs at runtime.
+          mkdir -p \
+            "$staging_dir/p2p-platform/storage/framework/views" \
+            "$staging_dir/p2p-platform/storage/framework/cache/data" \
+            "$staging_dir/p2p-platform/storage/framework/sessions" \
+            "$staging_dir/p2p-platform/storage/logs" \
+            "$staging_dir/p2p-platform/bootstrap/cache"
+
+          # A manifest of exactly what is in the artifact.
+          {
+            echo "version=${DEPLOY_VERSION}"
+            echo "commit=${DEPLOY_COMMIT}"
+            echo "built_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          } > "$staging_dir/DEPLOYMENT-INFO.txt"
+
+          # Prove no secret material shipped.
+          if find "$staging_dir" -name '.env' -o -name '.env.*' | grep -q .; then
+            echo "::error::An environment file leaked into the release artifact."
+            find "$staging_dir" -name '.env' -o -name '.env.*'
+            exit 1
+          fi
+          if [ -e "$staging_dir/p2p-platform/.git" ]; then
+            echo "::error::The .git directory leaked into the release artifact."
+            exit 1
+          fi
+
+          # Create the tarball. Deterministic flags keep the artifact
+          # byte-identical between the build and both deploy jobs.
+          tar --sort=name \
+              --mtime="UTC 2020-01-01" \
+              --owner=0 --group=0 --numeric-owner \
+              --mtime="@0" \
+              -czf "$artifact_dir/p2p-platform-${DEPLOY_VERSION}.tar.gz" \
+              -C "$staging_dir" .
+
+          echo "artifact_name=p2p-platform-${DEPLOY_VERSION}.tar.gz" >> "$GITHUB_OUTPUT"
+
+          echo "Release artifact contents (top level):"
+          ls -la "$staging_dir"
+          echo ""
+          echo "Artifact built from commit ${DEPLOY_COMMIT} (version ${DEPLOY_VERSION})."
+          echo "Size: $(du -h "$artifact_dir/p2p-platform-${DEPLOY_VERSION}.tar.gz" | cut -f1)"
+
+      - name: Upload the release artifact
+        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.x
+        with:
+          name: release-artifact-${{ needs.resolve-version.outputs.version }}
+          path: release-artifact/p2p-platform-${{ needs.resolve-version.outputs.version }}.tar.gz
+          if-no-files-found: error
+          retention-days: 14
+
+  # =========================================================================
+  # Job 3 — deploy-staging
+  #
+  # Copies the EXACT artifact produced by `test-build` into a temporary
+  # deploy folder on the runner and runs smoke checks against that copy.
+  #
+  # This job does NOT rebuild the application and does NOT re-checkout the
+  # source. It downloads the same tarball that was built from the tested
+  # checkout, so what is smoke-tested here is byte-for-byte what production
+  # will receive.
+  #
+  # IMPORTANT — no database in this job:
+  # A GitHub Actions service container belongs to the job that declares it.
+  # `test-build` owns the MySQL service, and that service does NOT exist on
+  # this job's runner. The smoke checks below are therefore deliberately
+  # database-free: they prove that the promoted artifact boots and serves
+  # its assets, not that the ledger triggers are installed. The real MySQL
+  # tests and the real append-only trigger enforcement stay in `test-build`,
+  # where they are actually meaningful, and they are not weakened here.
+  # =========================================================================
+  deploy-staging:
+    name: SIMULATED deploy to staging
+    needs: [resolve-version, test-build]
+    runs-on: ubuntu-latest
+    environment: staging
+
+    # Job-scoped CI-only application variables. They are set here, not on a
+    # single step, so that dependency installation and application boot see
+    # the same environment as the smoke checks.
+    #
+    # These are throwaway values for a disposable CI runner. They are NOT
+    # the local development credentials, they are NOT any real
+    # environment's secrets, and no `.env` file is used or created.
+    env:
+      APP_ENV: testing
+      APP_DEBUG: false
+      APP_URL: http://localhost
+      APP_KEY: base64:cDJwLWNpLXRocm93YXdheS1rZXktMDEyMzQ1Njc4OWE=
+      CACHE_STORE: array
+      SESSION_DRIVER: array
+      QUEUE_CONNECTION: sync
+      MAIL_MAILER: array
+      BROADCAST_CONNECTION: 'null'
+      DEPLOY_VERSION: ${{ needs.resolve-version.outputs.version }}
+      DEPLOY_COMMIT: ${{ needs.resolve-version.outputs.commit }}
+      DEPLOY_SHORT_COMMIT: ${{ needs.resolve-version.outputs.short_commit }}
+
+    steps:
+      - name: Set up PHP
+        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # v2
+        with:
+          php-version: '8.3'
+          # The same extension set the CI job uses, so the artifact boots
+          # under the same interpreter it was tested with.
+          extensions: mbstring, dom, curl, openssl, pdo, pdo_mysql, zip, intl, bcmath, gd, fileinfo, tokenizer, json, ctype, filter, session, hash, iconv, xml, xmlwriter, simplexml, phar, posix, pcntl, exif
+          coverage: none
+          tools: composer:v2
+
+      - name: Download the tested release artifact
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: release-artifact-${{ needs.resolve-version.outputs.version }}
+          path: incoming
+
+      - name: SIMULATED — copy the artifact into the staging deploy folder
+        run: |
+          set -euo pipefail
+
+          deploy_dir="deploy/staging"
+
+          rm -rf deploy
+          mkdir -p "$deploy_dir"
+
+          tar -xzf "incoming/p2p-platform-${DEPLOY_VERSION}.tar.gz" -C "$deploy_dir"
+
+          echo "############################################################"
+          echo "# SIMULATED DEPLOYMENT — STAGING"
+          echo "# This is NOT a live deployment. Nothing was uploaded to any"
+          echo "# server, container, or hosting service. The application is"
+          echo "# NOT live and is NOT serving real users."
+          echo "############################################################"
+          echo "Version          : ${DEPLOY_VERSION}"
+          echo "Commit          : ${DEPLOY_COMMIT}"
+          echo "Deploy folder   : ${deploy_dir} (temporary, on this runner)"
+          echo "Artifact        : incoming/p2p-platform-${DEPLOY_VERSION}.tar.gz"
+          echo "############################################################"
+
+      - name: Verify the deployed artifact matches the tested commit
+        run: |
+          set -euo pipefail
+          deploy_dir="deploy/staging"
+
+          # The artifact carries the commit it was built from.
+          info_commit="$(grep '^commit=' "$deploy_dir/DEPLOYMENT-INFO.txt" | cut -d= -f2-)"
+          if [ "$info_commit" != "$DEPLOY_COMMIT" ]; then
+            echo "::error::Artifact commit (${info_commit}) does not match the resolved commit (${DEPLOY_COMMIT})."
+            exit 1
+          fi
+
+          # The deployed application must not contain any environment file.
+          if find "$deploy_dir" -name '.env' -o -name '.env.*' | grep -q .; then
+            echo "::error::The deployed artifact contains an environment file."
+            exit 1
+          fi
+
+          # The frontend build must be present, because the Blade layout
+          # resolves assets through the Vite manifest. The artifact carries
+          # the build that was produced and verified in `test-build`; it is
+          # NOT rebuilt here.
+          test -f "$deploy_dir/p2p-platform/public/build/manifest.json" || {
+            echo "::error::The deployed artifact is missing the Vite manifest."
+            exit 1
+          }
+
+          echo "Deployed artifact matches commit ${DEPLOY_SHORT_COMMIT} (version ${DEPLOY_VERSION})."
+          echo "No environment file is present. The Vite manifest is present."
+
+      - name: Install the artifact's Composer dependencies
+        # The artifact intentionally ships WITHOUT `vendor` (it is
+        # git-ignored and machine-specific). Composer dependencies are
+        # installed here FROM THE ARTIFACT'S OWN composer.lock, so the
+        # promoted copy is the one that gets exercised.
+        #
+        # `--no-dev` is used because this is a deployment, not a test run.
+        # The dev requirements (Pest, PHPUnit, Larastan, Pint) are only
+        # needed by `test-build`, which already used them. The production
+        # autoloader is complete without them.
+        #
+        # `composer install` triggers `post-autoload-dump`, which runs
+        # `php artisan package:discover`. That boots the framework, so the
+        # job-scoped application variables above must be in place — they
+        # are. Package discovery does not touch the database.
+        run: |
+          set -euo pipefail
+          cd deploy/staging/p2p-platform
+
+          composer install \
+            --no-interaction \
+            --no-progress \
+            --prefer-dist \
+            --no-dev \
+            --no-scripts
+
+          # Discovery is run explicitly AFTER the install, so a discovery
+          # failure is reported against this step rather than being hidden
+          # inside Composer's script output.
+          php artisan package:discover --ansi
+
+          test -f vendor/autoload.php || {
+            echo "::error::Composer did not produce vendor/autoload.php." >&2
+            exit 1
+          }
+          echo "Composer dependencies installed from the artifact's composer.lock (no dev packages)."
+
+      - name: Smoke test the staging deployment
+        run: |
+          set -euo pipefail
+          cd deploy/staging/p2p-platform
+
+          mkdir -p \
+            storage/framework/views \
+            storage/framework/cache/data \
+            storage/framework/sessions \
+            storage/logs \
+            bootstrap/cache
+
+          # Smoke check 1 — the application boots and registers its routes.
+          # A broken deployment fails here with a clear message instead of
+          # surfacing as an unexplained error later.
+          php artisan --version
+          php artisan route:list --json > routes.json
+          php -r '
+            $routes = json_decode(file_get_contents("routes.json"), true);
+            if (! is_array($routes) || count($routes) === 0) {
+                fwrite(STDERR, "Smoke test FAILED: the application registered no routes.\n");
+                exit(1);
+            }
+            printf("Smoke test: application booted and registered %d routes.\n", count($routes));
+          '
+          rm -f routes.json
+
+          # Smoke check 2 — the expected application routes are present.
+          # These are the routes the React frontend links to, so a missing
+          # one means the promoted artifact is not the expected build.
+          php artisan route:list --json > routes.json
+          php -r '
+            $routes = json_decode(file_get_contents("routes.json"), true);
+            $names = array_column($routes, "name");
+            $expected = ["home", "dashboard", "login", "register", "wallet"];
+            $missing = array_values(array_filter($expected, fn ($n) => ! in_array($n, $names, true)));
+            if ($missing !== []) {
+                fwrite(STDERR, "Smoke test FAILED: missing expected routes: " . implode(", ", $missing) . "\n");
+                exit(1);
+            }
+            printf("Smoke test: all %d expected routes are present (%s).\n", count($expected), implode(", ", $expected));
+          '
+          rm -f routes.json
+
+          # Smoke check 3 — the compiled Blade view path resolves and is
+          # writable. This is the exact condition that broke the first CI
+          # run, so it is checked explicitly against the deployed copy.
+          php -r '
+            $path = realpath(__DIR__ . "/storage/framework/views");
+            if ($path === false) {
+                fwrite(STDERR, "Smoke test FAILED: the compiled view path does not resolve.\n");
+                exit(1);
+            }
+            if (! is_writable($path)) {
+                fwrite(STDERR, "Smoke test FAILED: the compiled view path is not writable: {$path}\n");
+                exit(1);
+            }
+            printf("Smoke test: compiled view path resolves and is writable (%s).\n", $path);
+          '
+
+          # Smoke check 4 — the built frontend assets shipped inside the
+          # artifact are intact and are the ones the Blade layout resolves.
+          php -r '
+            $dir = __DIR__ . "/public/build";
+            $manifestPath = $dir . "/manifest.json";
+            if (! is_file($manifestPath)) {
+                fwrite(STDERR, "Smoke test FAILED: the Vite manifest is missing.\n");
+                exit(1);
+            }
+            $manifest = json_decode(file_get_contents($manifestPath), true);
+            if (! is_array($manifest) || $manifest === []) {
+                fwrite(STDERR, "Smoke test FAILED: the Vite manifest is empty or unreadable.\n");
+                exit(1);
+            }
+            $entries = 0;
+            foreach ($manifest as $entry) {
+                if (! is_array($entry) || ! isset($entry["file"])) {
+                    fwrite(STDERR, "Smoke test FAILED: the Vite manifest has a malformed entry.\n");
+                    exit(1);
+                }
+                if (! is_file($dir . "/" . $entry["file"])) {
+                    fwrite(STDERR, "Smoke test FAILED: the Vite manifest references a missing asset: {$entry["file"]}\n");
+                    exit(1);
+                }
+                $entries++;
+            }
+            printf("Smoke test: Vite manifest present with %d entries; every referenced asset exists.\n", $entries);
+          '
+
+          # Smoke check 5 — the artifact is the application we expect: the
+          # Laravel entry point and the application bootstrap are in place.
+          test -f artisan || { echo "::error::Smoke test FAILED: artisan is missing." >&2; exit 1; }
+          test -f bootstrap/app.php || { echo "::error::Smoke test FAILED: bootstrap/app.php is missing." >&2; exit 1; }
+          test -f app/Providers/AppServiceProvider.php || { echo "::error::Smoke test FAILED: the application providers are missing." >&2; exit 1; }
+          echo "Smoke test: the Laravel entry point and bootstrap are present."
+
+          echo ""
+          echo "############################################################"
+          echo "# SIMULATED SMOKE TEST PASSED — STAGING"
+          echo "# The staging deploy folder passed every smoke check."
+          echo "# NOTHING WAS ACTUALLY DEPLOYED. The application is NOT live."
+          echo "# NOTE: no database is used in this job. The real MySQL tests"
+          echo "# and the real append-only trigger enforcement ran in the"
+          echo "# test-build job, against the very artifact promoted here."
+          echo "############################################################"
+
+  # =========================================================================
+  # Job 4 — deploy-production
+  #
+  # Identical to staging in every respect EXCEPT that it runs under the
+  # `production` environment. GitHub therefore pauses here and waits for
+  # the required reviewer (BrishtyDas22) to approve before the job starts.
+  #
+  # It uses the SAME artifact produced by `test-build`, downloaded from the
+  # artifact store — it is never rebuilt and never re-checked-out.
+  # =========================================================================
+  deploy-production:
+    name: SIMULATED deploy to production
+    needs: [resolve-version, test-build, deploy-staging]
+    runs-on: ubuntu-latest
+    environment: production
+
+    # Job-scoped CI-only application variables, identical in kind to the
+    # staging job. No `.env` file is used or created, and no local
+    # credential is involved.
+    env:
+      APP_ENV: testing
+      APP_DEBUG: false
+      APP_URL: http://localhost
+      APP_KEY: base64:cDJwLWNpLXRocm93YXdheS1rZXktMDEyMzQ1Njc4OWE=
+      CACHE_STORE: array
+      SESSION_DRIVER: array
+      QUEUE_CONNECTION: sync
+      MAIL_MAILER: array
+      BROADCAST_CONNECTION: 'null'
+      DEPLOY_VERSION: ${{ needs.resolve-version.outputs.version }}
+      DEPLOY_COMMIT: ${{ needs.resolve-version.outputs.commit }}
+      DEPLOY_SHORT_COMMIT: ${{ needs.resolve-version.outputs.short_commit }}
+
+    steps:
+      - name: Set up PHP
+        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # v2
+        with:
+          php-version: '8.3'
+          extensions: mbstring, dom, curl, openssl, pdo, pdo_mysql, zip, intl, bcmath, gd, fileinfo, tokenizer, json, ctype, filter, session, hash, iconv, xml, xmlwriter, simplexml, phar, posix, pcntl, exif
+          coverage: none
+          tools: composer:v2
+
+      - name: Download the tested release artifact
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: release-artifact-${{ needs.resolve-version.outputs.version }}
+          path: incoming
+
+      - name: SIMULATED — copy the artifact into the production deploy folder
+        run: |
+          set -euo pipefail
+
+          deploy_dir="deploy/production"
+
+          rm -rf deploy
+          mkdir -p "$deploy_dir"
+
+          tar -xzf "incoming/p2p-platform-${DEPLOY_VERSION}.tar.gz" -C "$deploy_dir"
+
+          echo "############################################################"
+          echo "# SIMULATED DEPLOYMENT — PRODUCTION"
+          echo "# This is NOT a live deployment. Nothing was uploaded to any"
+          echo "# server, container, or hosting service. The application is"
+          echo "# NOT live and is NOT serving real users."
+          echo "############################################################"
+          echo "Version          : ${DEPLOY_VERSION}"
+          echo "Commit          : ${DEPLOY_COMMIT}"
+          echo "Deploy folder   : ${deploy_dir} (temporary, on this runner)"
+          echo "Artifact        : incoming/p2p-platform-${DEPLOY_VERSION}.tar.gz"
+          echo "############################################################"
+
+      - name: Verify the deployed artifact matches the tested commit
+        run: |
+          set -euo pipefail
+          deploy_dir="deploy/production"
+
+          info_commit="$(grep '^commit=' "$deploy_dir/DEPLOYMENT-INFO.txt" | cut -d= -f2-)"
+          if [ "$info_commit" != "$DEPLOY_COMMIT" ]; then
+            echo "::error::Artifact commit (${info_commit}) does not match the resolved commit (${DEPLOY_COMMIT})."
+            exit 1
+          fi
+
+          if find "$deploy_dir" -name '.env' -o -name '.env.*' | grep -q .; then
+            echo "::error::The deployed artifact contains an environment file."
+            exit 1
+          fi
+
+          test -f "$deploy_dir/p2p-platform/public/build/manifest.json" || {
+            echo "::error::The deployed artifact is missing the Vite manifest."
+            exit 1
+          }
+
+          echo "Deployed artifact matches commit ${DEPLOY_SHORT_COMMIT} (version ${DEPLOY_VERSION})."
+          echo "No environment file is present. The Vite manifest is present."
+
+      - name: Install the artifact's Composer dependencies
+        # Same reasoning as the staging job: the artifact ships without
+        # `vendor`, so Composer dependencies are installed here from the
+        # artifact's own composer.lock. `--no-dev` keeps the deployment
+        # lean; the dev tooling was already used in `test-build`.
+        run: |
+          set -euo pipefail
+          cd deploy/production/p2p-platform
+
+          composer install \
+            --no-interaction \
+            --no-progress \
+            --prefer-dist \
+            --no-dev \
+            --no-scripts
+
+          php artisan package:discover --ansi
+
+          test -f vendor/autoload.php || {
+            echo "::error::Composer did not produce vendor/autoload.php." >&2
+            exit 1
+          }
+          echo "Composer dependencies installed from the artifact's composer.lock (no dev packages)."
+
+      - name: Smoke test the production deployment
+        run: |
+          set -euo pipefail
+          cd deploy/production/p2p-platform
+
+          mkdir -p \
+            storage/framework/views \
+            storage/framework/cache/data \
+            storage/framework/sessions \
+            storage/logs \
+            bootstrap/cache
+
+          # Smoke check 1 — the application boots and registers its routes.
+          php artisan --version
+          php artisan route:list --json > routes.json
+          php -r '
+            $routes = json_decode(file_get_contents("routes.json"), true);
+            if (! is_array($routes) || count($routes) === 0) {
+                fwrite(STDERR, "Smoke test FAILED: the application registered no routes.\n");
+                exit(1);
+            }
+            printf("Smoke test: application booted and registered %d routes.\n", count($routes));
+          '
+          rm -f routes.json
+
+          # Smoke check 2 — the expected application routes are present.
+          php artisan route:list --json > routes.json
+          php -r '
+            $routes = json_decode(file_get_contents("routes.json"), true);
+            $names = array_column($routes, "name");
+            $expected = ["home", "dashboard", "login", "register", "wallet"];
+            $missing = array_values(array_filter($expected, fn ($n) => ! in_array($n, $names, true)));
+            if ($missing !== []) {
+                fwrite(STDERR, "Smoke test FAILED: missing expected routes: " . implode(", ", $missing) . "\n");
+                exit(1);
+            }
+            printf("Smoke test: all %d expected routes are present (%s).\n", count($expected), implode(", ", $expected));
+          '
+          rm -f routes.json
+
+          # Smoke check 3 — the compiled Blade view path resolves and is
+          # writable.
+          php -r '
+            $path = realpath(__DIR__ . "/storage/framework/views");
+            if ($path === false) {
+                fwrite(STDERR, "Smoke test FAILED: the compiled view path does not resolve.\n");
+                exit(1);
+            }
+            if (! is_writable($path)) {
+                fwrite(STDERR, "Smoke test FAILED: the compiled view path is not writable: {$path}\n");
+                exit(1);
+            }
+            printf("Smoke test: compiled view path resolves and is writable (%s).\n", $path);
+          '
+
+          # Smoke check 4 — the built frontend assets shipped inside the
+          # artifact are intact.
+          php -r '
+            $dir = __DIR__ . "/public/build";
+            $manifestPath = $dir . "/manifest.json";
+            if (! is_file($manifestPath)) {
+                fwrite(STDERR, "Smoke test FAILED: the Vite manifest is missing.\n");
+                exit(1);
+            }
+            $manifest = json_decode(file_get_contents($manifestPath), true);
+            if (! is_array($manifest) || $manifest === []) {
+                fwrite(STDERR, "Smoke test FAILED: the Vite manifest is empty or unreadable.\n");
+                exit(1);
+            }
+            $entries = 0;
+            foreach ($manifest as $entry) {
+                if (! is_array($entry) || ! isset($entry["file"])) {
+                    fwrite(STDERR, "Smoke test FAILED: the Vite manifest has a malformed entry.\n");
+                    exit(1);
+                }
+                if (! is_file($dir . "/" . $entry["file"])) {
+                    fwrite(STDERR, "Smoke test FAILED: the Vite manifest references a missing asset: {$entry["file"]}\n");
+                    exit(1);
+                }
+                $entries++;
+            }
+            printf("Smoke test: Vite manifest present with %d entries; every referenced asset exists.\n", $entries);
+          '
+
+          # Smoke check 5 — the artifact is the application we expect.
+          test -f artisan || { echo "::error::Smoke test FAILED: artisan is missing." >&2; exit 1; }
+          test -f bootstrap/app.php || { echo "::error::Smoke test FAILED: bootstrap/app.php is missing." >&2; exit 1; }
+          test -f app/Providers/AppServiceProvider.php || { echo "::error::Smoke test FAILED: the application providers are missing." >&2; exit 1; }
+          echo "Smoke test: the Laravel entry point and bootstrap are present."
+
+          echo ""
+          echo "############################################################"
+          echo "# SIMULATED SMOKE TEST PASSED — PRODUCTION"
+          echo "# The production deploy folder passed every smoke check."
+          echo "# NOTHING WAS ACTUALLY DEPLOYED. The application is NOT live"
+          echo "# and is NOT serving real users. This is a simulation of the"
+          echo "# delivery pipeline, using disposable CI-only resources."
+          echo "# NOTE: no database is used in this job. The real MySQL tests"
+          echo "# and the real append-only trigger enforcement ran in the"
+          echo "# test-build job, against the very artifact promoted here."
+          echo "############################################################"
