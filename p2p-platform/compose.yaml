@@ -1,51 +1,51 @@
 name: p2p-docker
 
 services:
-  app:
-    build: .
-    ports:
-      - "127.0.0.1:8081:80"
-    environment:
-      APP_ENV: production
-      APP_DEBUG: "false"
-      APP_URL: http://127.0.0.1:8081
-      APP_KEY: "${P2P_DOCKER_APP_KEY:?App key is required}"
+    app:
+        build: .
+        ports:
+            - '127.0.0.1:8081:80'
+        environment:
+            APP_ENV: production
+            APP_DEBUG: 'false'
+            APP_URL: http://127.0.0.1:8081
+            APP_KEY: '${P2P_DOCKER_APP_KEY:?App key is required}'
 
-      P2P_DB_CONNECTION: mysql_p2pdev
-      DB_CONNECTION: mysql_p2pdev
-      P2PDEV_DB_HOST: db
-      P2PDEV_DB_PORT: "3306"
-      P2PDEV_DB_DATABASE: p2p_platform_docker
-      P2PDEV_DB_USERNAME: p2p_app
-      P2PDEV_DB_PASSWORD: "${P2P_DOCKER_DB_PASSWORD:?Database password is required}"
+            P2P_DB_CONNECTION: mysql_p2pdev
+            DB_CONNECTION: mysql_p2pdev
+            P2PDEV_DB_HOST: db
+            P2PDEV_DB_PORT: '3306'
+            P2PDEV_DB_DATABASE: p2p_platform_docker
+            P2PDEV_DB_USERNAME: p2p_app
+            P2PDEV_DB_PASSWORD: '${P2P_DOCKER_DB_PASSWORD:?Database password is required}'
 
-      SESSION_DRIVER: file
-      CACHE_STORE: file
-      QUEUE_CONNECTION: sync
-      MAIL_MAILER: log
-      LOG_CHANNEL: stderr
+            SESSION_DRIVER: file
+            CACHE_STORE: file
+            QUEUE_CONNECTION: sync
+            MAIL_MAILER: log
+            LOG_CHANNEL: stderr
 
-    depends_on:
-      db:
-        condition: service_healthy
+        depends_on:
+            db:
+                condition: service_healthy
 
-  db:
-    image: mysql:8.0
-    command:
-      - --log-bin-trust-function-creators=1
-    environment:
-      MYSQL_DATABASE: p2p_platform_docker
-      MYSQL_USER: p2p_app
-      MYSQL_PASSWORD: "${P2P_DOCKER_DB_PASSWORD:?Database password is required}"
-      MYSQL_ROOT_PASSWORD: "${P2P_DOCKER_ROOT_PASSWORD:?Root password is required}"
-    volumes:
-      - mysql_data:/var/lib/mysql
-    healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1"]
-      interval: 10s
-      timeout: 5s
-      retries: 15
-      start_period: 30s
+    db:
+        image: mysql:8.0
+        command:
+            - --log-bin-trust-function-creators=1
+        environment:
+            MYSQL_DATABASE: p2p_platform_docker
+            MYSQL_USER: p2p_app
+            MYSQL_PASSWORD: '${P2P_DOCKER_DB_PASSWORD:?Database password is required}'
+            MYSQL_ROOT_PASSWORD: '${P2P_DOCKER_ROOT_PASSWORD:?Root password is required}'
+        volumes:
+            - mysql_data:/var/lib/mysql
+        healthcheck:
+            test: ['CMD', 'mysqladmin', 'ping', '-h', '127.0.0.1']
+            interval: 10s
+            timeout: 5s
+            retries: 15
+            start_period: 30s
 
 volumes:
-  mysql_data:
+    mysql_data:
