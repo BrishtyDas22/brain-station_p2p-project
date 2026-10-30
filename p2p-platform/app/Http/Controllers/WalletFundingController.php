@@ -6,7 +6,9 @@ namespace App\Http\Controllers;
 
 use App\Enums\FundingIntent;
 use App\Enums\FundingMethod;
+use App\Enums\KycStatus;
 use App\Http\Requests\WalletFundingStoreRequest;
+use App\Models\User;
 use App\Models\Wallet;
 use App\Models\WalletFunding;
 use App\Services\WalletFundingService;
@@ -44,12 +46,20 @@ class WalletFundingController extends Controller
 
     /**
      * The "Add Money" screen — amount, method, and the current wallet balance.
+     *
+     * The user's KYC status travels with the page so the client can explain,
+     * in the user's own terms, why the form is not there yet. The status is a
+     * *presentation* concern only: the authorisation boundary lives in
+     * {@see WalletFundingService::assertEligible()}, which the `store` route
+     * goes through. A client that renders the form anyway is still refused.
      */
     public function index(Request $request): Response
     {
         $user = $request->user();
 
         $balanceMinor = $this->balanceFor($user->id);
+
+        $kycStatus = $this->kycStatusFor($user);
 
         return Inertia::render('wallet/add-money', [
             'methods' => $this->methods(),
@@ -69,7 +79,26 @@ class WalletFundingController extends Controller
                 'holder' => (string) config('p2p-funding.test_card.holder'),
             ],
             'environmentLabel' => (string) config('p2p-funding.environment_label'),
+            'kyc' => [
+                'status' => $kycStatus->value,
+                'statusLabel' => $kycStatus->label(),
+            ],
         ]);
+    }
+
+    /**
+     * The user's current KYC status.
+     *
+     * A user has at most one submission: `kyc_submissions.user_id` is UNIQUE,
+     * and a re-submission replaces the rejected row rather than adding a second
+     * one. A user who has never submitted has no row at all, which is
+     * `NOT_SUBMITTED`.
+     */
+    private function kycStatusFor(User $user): KycStatus
+    {
+        $submission = $user->kycSubmission()->first();
+
+        return $submission === null ? KycStatus::NOT_SUBMITTED : $submission->status;
     }
 
     /**
