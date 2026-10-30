@@ -65,7 +65,17 @@ RUN sed -i 's!/var/www/html!/var/www/html/public!g' \
         '</Directory>' \
         > /etc/apache2/conf-available/laravel.conf \
     && a2enconf laravel \
-    && chmod -R ug+rwX storage bootstrap/cache
+    && chmod -R ug+rwX storage bootstrap/cache \
+    \
+    # Render mounts secret FILES under /etc/secrets/ owned by group 1000.
+    # The web server runs as www-data, which is not in that group, so the
+    # CA bundle cannot be opened and PDO fails with "Cannot connect to
+    # MySQL using SSL". Create the group if it is absent and add www-data
+    # to it so the mounted secret is readable by the application user.
+    # (Render's documented requirement: "make sure your application user
+    # is in group 1000".)
+    && (getent group 1000 || groupadd -g 1000 render) \
+    && usermod -aG 1000 www-data
 
 EXPOSE 80
 
